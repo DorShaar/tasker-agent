@@ -18,4 +18,10 @@
     <PackageReference Include="Tasker.ObjectSerializer.JsonService" Version="1.0.5" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Infra\Options\Config.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

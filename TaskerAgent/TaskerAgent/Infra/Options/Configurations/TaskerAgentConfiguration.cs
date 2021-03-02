@@ -2,7 +2,7 @@
 
 namespace TaskerAgent.Infra.Options.Configurations
 {
-    public class TaskerAgentConfigurtaion
+    public class TaskerAgentConfiguration
     {
         public string DatabaseDirectoryPath { get; set; }
         public string InputFilePath { get; set; }

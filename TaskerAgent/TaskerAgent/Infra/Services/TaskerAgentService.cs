@@ -16,7 +16,7 @@ namespace TaskerAgent.Infra.Services
     {
         private readonly IDbRepository<ITasksGroup> mTasksGroupRepository;
         private readonly ITasksGroupFactory mTaskGroupFactory;
-        private readonly IOptionsMonitor<TaskerAgentConfigurtaion> mTaskerAgentOptions; // tODO
+        private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions; // tODO
         private readonly ILogger<TaskerAgentService> mLogger;
 
         // TODO every morning writes all the todays tasks.

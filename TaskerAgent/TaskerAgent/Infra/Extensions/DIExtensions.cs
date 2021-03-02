@@ -62,7 +62,7 @@ namespace TaskerAgent.Infra.Extensions
             IConfiguration configuration = configurationBuilder.Build();
 
             // Binds between IConfiguration to given configurtaion.
-            services.Configure<TaskerAgentConfigurtaion>(configuration);
+            services.Configure<TaskerAgentConfiguration>(configuration);
             services.AddOptions();
         }
     }
