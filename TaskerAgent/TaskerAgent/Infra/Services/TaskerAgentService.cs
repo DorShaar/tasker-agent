@@ -3,20 +3,25 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using TaskData.OperationResults;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
+using TaskerAgent.Infra.TasksParser;
 using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services
 {
-    public class TaskerAgentService //: ITaskerAgentService // TODO 
+    public class TaskerAgentService
     {
+        private const string FromConfigGroupName = "from-config";
+
         private readonly IDbRepository<ITasksGroup> mTasksGroupRepository;
         private readonly ITasksGroupFactory mTaskGroupFactory;
-        private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions; // tODO
+        private readonly RepetitiveTasksParser mRepetitiveTasksParser;
+        private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
         private readonly ILogger<TaskerAgentService> mLogger;
 
         // TODO every morning writes all the todays tasks.
@@ -24,11 +29,15 @@ namespace TaskerAgent.Infra.Services
 
         // TODO calendar tasks + reminders.
         public TaskerAgentService(IDbRepository<ITasksGroup> TaskGroupRepository,
-            ITasksGroupFactory tasksGroupBuilder,
+            ITasksGroupFactory tasksGroupFactory,
+            RepetitiveTasksParser repetitiveTasksParser,
+            IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
             ILogger<TaskerAgentService> logger)
         {
             mTasksGroupRepository = TaskGroupRepository ?? throw new ArgumentNullException(nameof(TaskGroupRepository));
-            mTaskGroupFactory = tasksGroupBuilder ?? throw new ArgumentNullException(nameof(tasksGroupBuilder));
+            mTaskGroupFactory = tasksGroupFactory ?? throw new ArgumentNullException(nameof(tasksGroupFactory));
+            mRepetitiveTasksParser = repetitiveTasksParser ?? throw new ArgumentNullException(nameof(repetitiveTasksParser));
+            mTaskerAgentOptions = taskerAgentOptions ?? throw new ArgumentNullException(nameof(taskerAgentOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -37,6 +46,9 @@ namespace TaskerAgent.Infra.Services
             string todayDate = DateTime.Now.ToString(TimeConsts.TimeFormat);
 
             ITasksGroup todaysTasksGroup = await mTasksGroupRepository.FindAsync(todayDate).ConfigureAwait(false);
+
+            if (todaysTasksGroup == null)
+                return null;
 
             return todaysTasksGroup.GetAllTasks();
         }
@@ -47,9 +59,12 @@ namespace TaskerAgent.Infra.Services
 
             foreach (DateTime date in GetThisWeekDates())
             {
-                ITasksGroup todaysTasksGroup = await mTasksGroupRepository.FindAsync(date.ToString(TimeConsts.TimeFormat)).ConfigureAwait(false);
+                ITasksGroup taskGroup = await mTasksGroupRepository.FindAsync(date.ToString(TimeConsts.TimeFormat)).ConfigureAwait(false);
 
-                thisWeekTasks.AddRange(todaysTasksGroup.GetAllTasks());
+                if (taskGroup == null)
+                    continue;
+
+                thisWeekTasks.AddRange(taskGroup.GetAllTasks());
             }
 
             return thisWeekTasks;
@@ -65,18 +80,33 @@ namespace TaskerAgent.Infra.Services
             }
         }
 
-        // TODO read from config the tasks.
-        public async Task UpdateRepetitiveTasks() 
+        public async Task UpdateRepetitiveTasks()
         {
-            ReadRepetetiveTasksFromInputFile();
+            ITasksGroup tasksFromConfigGroup = ReadRepetitiveTasksFromInputFile();
 
-            //if (WasUpdatePerformed()) // TODO
-            //    UpdateDatabase();
+            if (tasksFromConfigGroup == null)
+            {
+                mLogger.LogError("Could not update repetitive tasks");
+                return;
+            }
+
+            // TODO further implement.
+            if (await WasUpdatePerformed(tasksFromConfigGroup).ConfigureAwait(false))
+                await Update(tasksFromConfigGroup).ConfigureAwait(false);
         }
 
-        private async Task ReadRepetetiveTasksFromInputFile()
+        private ITasksGroup ReadRepetitiveTasksFromInputFile()
         {
+            OperationResult<ITasksGroup> tasksFromConfigGroupCreationResult = mTaskGroupFactory.CreateGroup(FromConfigGroupName);
+            if (!tasksFromConfigGroupCreationResult.Success)
+            {
+                mLogger.LogError($"Could not create group {FromConfigGroupName}");
+                return null;
+            }
 
+            ITasksGroup tasksFromConfigGroup = tasksFromConfigGroupCreationResult.Value;
+            mRepetitiveTasksParser.ParseIntoGroup(tasksFromConfigGroup);
+            return tasksFromConfigGroup;
         }
 
         // TODO Create summary with score on Saturday.

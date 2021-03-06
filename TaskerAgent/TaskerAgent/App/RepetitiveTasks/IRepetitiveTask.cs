@@ -3,9 +3,8 @@ using TaskerAgent.Domain;
 
 namespace TaskerAgent.App.RepetitiveTasks
 {
-    public interface IRepetitiveTask
+    public interface IRepetitiveTask : IWorkTask
     {
-        IWorkTask WorkTask { get; }
         Frequency Frequency { get; }
     }
 }

@@ -4,8 +4,15 @@ using Microsoft.Extensions.Logging;
 using ObjectSerializer.JsonService;
 using System.IO;
 using TaskData;
+using TaskData.TasksGroups;
+using TaskData.WorkTasks;
+using TaskerAgent.App.Persistence.Repositories;
+using TaskerAgent.Domain.RepetitiveTasks;
+using TaskerAgent.Infra.Context;
 using TaskerAgent.Infra.Options.Configurations;
+using TaskerAgent.Infra.Persistence.Repositories;
 using TaskerAgent.Infra.Services;
+using TaskerAgent.Infra.TasksParser;
 
 namespace TaskerAgent.Infra.Extensions
 {
@@ -26,24 +33,25 @@ namespace TaskerAgent.Infra.Extensions
 
         private static void RegisterServices(IServiceCollection services)
         {
-            //services.AddSingleton<ITaskerAgentService, TaskerAgentService>();
+            services.AddSingleton<TaskerAgentService>();
+            services.AddSingleton<RepetitiveTasksParser>();
         }
 
         private static void RegisterRepositories(IServiceCollection services)
         {
-            //services.AddSingleton<IDbRepository<ITasksGroup>, TasksGroupRepository>();
-            //services.AddSingleton<IDbRepository<IWorkTask>, WorkTaskRepository>();
+            services.AddSingleton<IDbRepository<ITasksGroup>, TasksGroupRepository>();
         }
 
         private static void RegisterDadabases(IServiceCollection services)
         {
-            //services.AddSingleton<IAppDbContext, AppDbContext>();
+            services.AddSingleton<AppDbContext>();
         }
 
         private static void RegisterTaskerCoreComponents(IServiceCollection services)
         {
             services.UseJsonObjectSerializer();
             services.UseTaskerDataEntities();
+            services.AddSingleton<IWorkTaskProducer, RepetetiveTaskProducer>();
         }
 
         private static void RegisterLogger(IServiceCollection services)

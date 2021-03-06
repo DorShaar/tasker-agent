@@ -1,2 +1,3 @@
-DatabaseDirectoryPath: /mnt/database
+DatabaseDirectoryPath: TaskerAgentDB
 InputFilePath: TestFiles/repetitive_tasks.txt
+DaysToKeepForward: 40
