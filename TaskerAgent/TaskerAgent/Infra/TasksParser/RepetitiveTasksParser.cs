@@ -8,7 +8,6 @@ using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskerAgent.App.RepetitiveTasks;
 using TaskerAgent.Domain;
-using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Infra.Options.Configurations;
 
 namespace TaskerAgent.Infra.TasksParser
@@ -50,11 +49,12 @@ namespace TaskerAgent.Infra.TasksParser
 
                 OperationResult<IWorkTask> createTaskResult = mTaskGroupFactory.CreateTask(taskGroup, taskDescription);
 
-                if (!createTaskResult.Success)
+                if (!createTaskResult.Success ||
+                    !(createTaskResult.Value is IRepetitiveMeasureableTask repetitiveMeasureableTask))
+                {
+                    taskGroup.RemoveTask(createTaskResult.Value.ID);
                     return;
-
-                if (!(createTaskResult.Value is IRepetitiveMeasureableTask repetitiveMeasureableTask))
-                    return;
+                }
 
                 if (!Enum.TryParse(frequencyString, ignoreCase: true, out Frequency frequency))
                     return;
@@ -65,16 +65,11 @@ namespace TaskerAgent.Infra.TasksParser
                 if (!int.TryParse(expectedString, out int expected))
                     return;
 
-                IMeasureableTask measureableTask = new MeasureableTask(measureType, expected, score: 1);
-
-                repetitiveMeasureableTask.InitializeRepetitiveMeasureableTask(frequency, measureableTask);
-
-                taskGroup.AddTask(repetitiveMeasureableTask); // TODO think is needed? Initialize is not enough?
+                repetitiveMeasureableTask.InitializeRepetitiveMeasureableTask(frequency, measureType, expected, score: 1);
             }
             catch (IndexOutOfRangeException ex)
             {
                 mLogger.LogError(ex, "Failed to Parse");
-                return;
             }
         }
     }

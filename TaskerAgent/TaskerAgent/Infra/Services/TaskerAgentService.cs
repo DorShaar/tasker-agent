@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using TaskData.OperationResults;
 using TaskData.TasksGroups;
@@ -9,6 +10,7 @@ using TaskData.WorkTasks;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
+using TaskerAgent.Infra.RepetitiveTasksUpdaters;
 using TaskerAgent.Infra.TasksParser;
 using Triangle.Time;
 
@@ -20,6 +22,7 @@ namespace TaskerAgent.Infra.Services
 
         private readonly IDbRepository<ITasksGroup> mTasksGroupRepository;
         private readonly ITasksGroupFactory mTaskGroupFactory;
+        private readonly RepetitiveTasksUpdater mRepetitiveTasksUpdater;
         private readonly RepetitiveTasksParser mRepetitiveTasksParser;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
         private readonly ILogger<TaskerAgentService> mLogger;
@@ -30,12 +33,14 @@ namespace TaskerAgent.Infra.Services
         // TODO calendar tasks + reminders.
         public TaskerAgentService(IDbRepository<ITasksGroup> TaskGroupRepository,
             ITasksGroupFactory tasksGroupFactory,
+            RepetitiveTasksUpdater repetitiveTasksUpdater,
             RepetitiveTasksParser repetitiveTasksParser,
             IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
             ILogger<TaskerAgentService> logger)
         {
             mTasksGroupRepository = TaskGroupRepository ?? throw new ArgumentNullException(nameof(TaskGroupRepository));
             mTaskGroupFactory = tasksGroupFactory ?? throw new ArgumentNullException(nameof(tasksGroupFactory));
+            mRepetitiveTasksUpdater = repetitiveTasksUpdater ?? throw new ArgumentNullException(nameof(repetitiveTasksUpdater));
             mRepetitiveTasksParser = repetitiveTasksParser ?? throw new ArgumentNullException(nameof(repetitiveTasksParser));
             mTaskerAgentOptions = taskerAgentOptions ?? throw new ArgumentNullException(nameof(taskerAgentOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -90,9 +95,11 @@ namespace TaskerAgent.Infra.Services
                 return;
             }
 
-            // TODO further implement.
-            if (await WasUpdatePerformed(tasksFromConfigGroup).ConfigureAwait(false))
-                await Update(tasksFromConfigGroup).ConfigureAwait(false);
+            IEnumerable<string> thisWeekTasks = (await GetThisWeekTasks().ConfigureAwait(false))
+                .Select(workTask => workTask.Description).Distinct();
+
+            if (mRepetitiveTasksUpdater.WasUpdatePerformed(tasksFromConfigGroup, thisWeekTasks))
+                await mRepetitiveTasksUpdater.Update(tasksFromConfigGroup).ConfigureAwait(false);
         }
 
         private ITasksGroup ReadRepetitiveTasksFromInputFile()

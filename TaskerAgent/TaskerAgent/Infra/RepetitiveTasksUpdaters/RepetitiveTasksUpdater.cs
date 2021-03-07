@@ -8,7 +8,6 @@ using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.RepetitiveTasks;
-using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksClusters;
 using TaskerAgent.Infra.Options.Configurations;
 using Triangle.Time;
@@ -31,7 +30,7 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
         }
 
         // TODO not for this week but for the next X days.
-        private bool WasUpdatePerformed(ITasksGroup tasksGroupFromConfig, IEnumerable<string> thisWeekTasks)
+        public bool WasUpdatePerformed(ITasksGroup tasksGroupFromConfig, IEnumerable<string> thisWeekTasks)
         {
             IEnumerable<string> tasksFromConfig = tasksGroupFromConfig.GetAllTasks()
                 .Select(workTask => workTask.Description).Distinct();
@@ -71,25 +70,35 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
 
         private void UpdateGroup(IEnumerable<IWorkTask> dailyTasksToUpdateAccordingly, ITasksGroup currentDailyTaskGroup)
         {
-            // TODO update in case of exist.
-            // TODO update in case of missing.
-
             foreach (IWorkTask dailyTaskToUpdateAccordingly in dailyTasksToUpdateAccordingly)
             {
+                if (!(dailyTaskToUpdateAccordingly is IRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
+                    continue;
+
                 bool isNewTask = true;
 
                 foreach (IWorkTask currentDailyTask in currentDailyTaskGroup.GetAllTasks())
                 {
+                    if (!(currentDailyTask is IRepetitiveMeasureableTask currentRepititiveTask))
+                        continue;
+
                     if (dailyTaskToUpdateAccordingly.Description.Equals(currentDailyTask.Description, StringComparison.OrdinalIgnoreCase))
                     {
-                        UpdateCurrentTask(currentDailyTask, dailyTaskToUpdateAccordingly);
+                        UpdateCurrentTask(currentDailyTaskGroup, currentRepititiveTask, repititiveTaskToUpdateAccordingly);
                         isNewTask = false;
                     }
                 }
 
                 if (isNewTask)
-                    CreateNewTask(currentDailyTaskGroup, dailyTaskToUpdateAccordingly as IRepetitiveMeasureableTask);
+                    CreateNewTask(currentDailyTaskGroup, repititiveTaskToUpdateAccordingly);
             }
+        }
+
+        private void UpdateCurrentTask(ITasksGroup currentDailyTaskGroup, IRepetitiveMeasureableTask currentDailyTask,
+            IRepetitiveMeasureableTask dailyTaskToUpdateAccordingly)
+        {
+            // TODO check if actual, expected or score was changed.
+            //if (currentDailyTask.)
         }
 
         private void CreateNewTask(ITasksGroup currentDailyTaskGroup, IRepetitiveMeasureableTask dailyTaskToUpdateAccordingly)
@@ -103,12 +112,10 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
                 return;
             }
 
-            IMeasureableTask measureableTask =
-                new MeasureableTask(dailyTaskToUpdateAccordingly.MeasureType, dailyTaskToUpdateAccordingly.Expected, score: 1);
-
-            repetitiveMeasureableTask.InitializeRepetitiveMeasureableTask(dailyTaskToUpdateAccordingly.Frequency, measureableTask);
-
-            //currentDailyTaskGroup.AddTask() // // TODO think is needed? Initialize is not enough?
+            repetitiveMeasureableTask.InitializeRepetitiveMeasureableTask(dailyTaskToUpdateAccordingly.Frequency,
+                dailyTaskToUpdateAccordingly.MeasureType,
+                dailyTaskToUpdateAccordingly.Expected,
+                score: 1);
         }
 
         // TODO

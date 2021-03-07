@@ -11,6 +11,7 @@ using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Infra.Context;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Persistence.Repositories;
+using TaskerAgent.Infra.RepetitiveTasksUpdaters;
 using TaskerAgent.Infra.Services;
 using TaskerAgent.Infra.TasksParser;
 
@@ -34,6 +35,7 @@ namespace TaskerAgent.Infra.Extensions
         private static void RegisterServices(IServiceCollection services)
         {
             services.AddSingleton<TaskerAgentService>();
+            services.AddSingleton<RepetitiveTasksUpdater>();
             services.AddSingleton<RepetitiveTasksParser>();
         }
 

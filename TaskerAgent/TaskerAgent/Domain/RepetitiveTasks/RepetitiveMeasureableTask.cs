@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using System;
 using TaskData.TaskStatus;
 using TaskData.WorkTasks;
 using TaskerAgent.App.RepetitiveTasks;
@@ -11,18 +10,19 @@ namespace TaskerAgent.Domain.RepetitiveTasks
     public class RepetitiveMeasureableTask : WorkTask, IRepetitiveMeasureableTask
     {
         [JsonProperty]
-        private IMeasureableTask mMeasureableTask;
+        public Frequency Frequency { get; set; }
 
         [JsonProperty]
-        public Frequency Frequency { get; private set; }
+        public MeasureType MeasureType { get; set; }
 
-        public MeasureType MeasureType => mMeasureableTask.MeasureType;
+        [JsonProperty]
+        public int Expected { get; set; }
 
-        public int Expected => mMeasureableTask.Expected;
+        [JsonProperty]
+        public int Actual { get; set; }
 
-        public int Actual => mMeasureableTask.Actual;
-
-        public int Score => mMeasureableTask.Score;
+        [JsonProperty]
+        public int Score { get; set; }
 
         internal RepetitiveMeasureableTask(string id, string description): base(id, description)
         {
@@ -35,16 +35,28 @@ namespace TaskerAgent.Domain.RepetitiveTasks
             ITaskStatusHistory taskStatusHistory,
             TaskTriangle taskTriangle,
             Frequency frequency,
-            IMeasureableTask measureableTask) : base(id, groupName, description, taskStatusHistory, taskTriangle)
+            MeasureType measureType,
+            int expected,
+            int actual,
+            int score) : base(id, groupName, description, taskStatusHistory, taskTriangle)
         {
             Frequency = frequency;
-            mMeasureableTask = measureableTask ?? throw new ArgumentNullException(nameof(measureableTask));
+            MeasureType = measureType;
+            Expected = expected;
+            Actual = actual;
+            Score = score;
         }
 
-        public void InitializeRepetitiveMeasureableTask(Frequency frequency, IMeasureableTask measureableTask)
+        public void InitializeRepetitiveMeasureableTask(
+            Frequency frequency,
+            MeasureType measureType,
+            int expected,
+            int score)
         {
             Frequency = frequency;
-            mMeasureableTask = measureableTask ?? throw new ArgumentNullException(nameof(measureableTask));
+            MeasureType = measureType;
+            Expected = expected;
+            Score = score;
         }
     }
 }
