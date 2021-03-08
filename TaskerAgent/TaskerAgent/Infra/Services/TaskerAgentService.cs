@@ -87,6 +87,9 @@ namespace TaskerAgent.Infra.Services
 
         public async Task UpdateRepetitiveTasks()
         {
+            if (!ShouldPerformUpdate())
+                return;
+
             ITasksGroup tasksFromConfigGroup = ReadRepetitiveTasksFromInputFile();
 
             if (tasksFromConfigGroup == null)
@@ -95,11 +98,19 @@ namespace TaskerAgent.Infra.Services
                 return;
             }
 
-            IEnumerable<string> thisWeekTasks = (await GetThisWeekTasks().ConfigureAwait(false))
-                .Select(workTask => workTask.Description).Distinct();
+            await mRepetitiveTasksUpdater.Update(tasksFromConfigGroup).ConfigureAwait(false);
+        }
 
-            if (mRepetitiveTasksUpdater.WasUpdatePerformed(tasksFromConfigGroup, thisWeekTasks))
-                await mRepetitiveTasksUpdater.Update(tasksFromConfigGroup).ConfigureAwait(false);
+        // TODO
+        private bool ShouldPerformUpdate()
+        {
+            // TODO config to hold file with last hash.
+            //string lastHash = mTaskerAgentOptions.CurrentValue.Hash;
+            //string currentHash = CalculateHash();
+
+            //return lastHash == currentHash;
+
+            return true;
         }
 
         private ITasksGroup ReadRepetitiveTasksFromInputFile()

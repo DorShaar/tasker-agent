@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,44 +20,53 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
         private readonly IDbRepository<ITasksGroup> mTasksGroupRepository;
         private readonly ITasksGroupFactory mTaskGroupFactory;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
+        private readonly ILogger<RepetitiveTasksUpdater> mLogger;
 
         public RepetitiveTasksUpdater(IDbRepository<ITasksGroup> tasksGroupRepository,
             ITasksGroupFactory taskGroupFactory,
-            IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions)
+            IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
+            ILogger<RepetitiveTasksUpdater> logger)
         {
             mTasksGroupRepository = tasksGroupRepository ?? throw new ArgumentNullException(nameof(tasksGroupRepository));
             mTaskGroupFactory = taskGroupFactory ?? throw new ArgumentNullException(nameof(taskGroupFactory));
             mTaskerAgentOptions = taskerAgentOptions ?? throw new ArgumentNullException(nameof(taskerAgentOptions));
+            mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        // TODO not for this week but for the next X days.
-        public bool WasUpdatePerformed(ITasksGroup tasksGroupFromConfig, IEnumerable<string> thisWeekTasks)
+        public async Task Update(ITasksGroup tasksGroupToUpdateAccordingly)
         {
-            IEnumerable<string> tasksFromConfig = tasksGroupFromConfig.GetAllTasks()
-                .Select(workTask => workTask.Description).Distinct();
+            TasksCluster tasksCluster = TasksCluster.SplitTaskGroupByFrequency(tasksGroupToUpdateAccordingly);
 
-            return tasksFromConfig.Except(thisWeekTasks).Any();
+            // TODO UpdateTasks - return groups.
+            await UpdateTasks(tasksCluster.DailyTasks).ConfigureAwait(false);
+            await UpdateTasks(tasksCluster.WeeklyTasks).ConfigureAwait(false);
+            await UpdateTasks(tasksCluster.MonthlyTasks).ConfigureAwait(false);
+
+            await mTasksGroupRepository.UpdateAsync(returnedGroups).ConfigureAwait(false);
         }
 
-        public async Task Update(ITasksGroup tasksGroup)
-        {
-            TasksCluster tasksCluster = TasksCluster.SplitTaskGroupByFrequency(tasksGroup);
-
-            await UpdateDailyTasks(tasksCluster.DailyTasks).ConfigureAwait(false);
-            //UpdateWeeklyTasks(tasksCluster.WeeklyTasks);
-            //UpdateMonthlyTasks(tasksCluster.MonthlyTasks);
-
-            await mTasksGroupRepository.UpdateAsync(tasksGroup).ConfigureAwait(false);
-        }
-
-        private async Task UpdateDailyTasks(IEnumerable<IWorkTask> dailyTasksToUpdate)
+        private async Task UpdateTasks(IEnumerable<IWorkTask> dailyTasksToUpdateAccordingly)
         {
             foreach (DateTime date in GetNextDaysDates(mTaskerAgentOptions.CurrentValue.DaysToKeepForward))
             {
-                ITasksGroup dailyTaskGroup =
-                    await mTasksGroupRepository.FindAsync(date.ToString(TimeConsts.TimeFormat)).ConfigureAwait(false);
+                string groupName = date.ToString(TimeConsts.TimeFormat);
 
-                UpdateGroup(dailyTasksToUpdate, dailyTaskGroup);
+                ITasksGroup taskGroup =
+                    await mTasksGroupRepository.FindAsync(groupName).ConfigureAwait(false);
+
+                if (taskGroup == null)
+                {
+                    OperationResult<ITasksGroup> taskGroupResult = mTaskGroupFactory.CreateGroup(groupName);
+                    if (!taskGroupResult.Success)
+                    {
+                        mLogger.LogError($"Could not create group {groupName}");
+                        continue;
+                    }
+
+                    taskGroup = taskGroupResult.Value;
+                }
+
+                UpdateGroup(taskGroup, dailyTasksToUpdateAccordingly);
             }
         }
 
@@ -68,43 +78,48 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
             }
         }
 
-        private void UpdateGroup(IEnumerable<IWorkTask> dailyTasksToUpdateAccordingly, ITasksGroup currentDailyTaskGroup)
+        private void UpdateGroup(ITasksGroup currentTaskGroup, IEnumerable<IWorkTask> tasksToUpdateAccordingly)
         {
-            foreach (IWorkTask dailyTaskToUpdateAccordingly in dailyTasksToUpdateAccordingly)
+            foreach (IWorkTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
             {
-                if (!(dailyTaskToUpdateAccordingly is IRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
+                if (!(taskToUpdateAccordingly is IRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
                     continue;
 
                 bool isNewTask = true;
 
-                foreach (IWorkTask currentDailyTask in currentDailyTaskGroup.GetAllTasks())
+                foreach (IWorkTask currentTask in currentTaskGroup.GetAllTasks())
                 {
-                    if (!(currentDailyTask is IRepetitiveMeasureableTask currentRepititiveTask))
+                    if (!(currentTask is IRepetitiveMeasureableTask currentRepititiveTask))
                         continue;
 
-                    if (dailyTaskToUpdateAccordingly.Description.Equals(currentDailyTask.Description, StringComparison.OrdinalIgnoreCase))
+                    if (taskToUpdateAccordingly.Description.Equals(currentTask.Description, StringComparison.OrdinalIgnoreCase))
                     {
-                        UpdateCurrentTask(currentDailyTaskGroup, currentRepititiveTask, repititiveTaskToUpdateAccordingly);
+                        UpdateCurrentTask(currentRepititiveTask, repititiveTaskToUpdateAccordingly);
+                        currentTaskGroup.UpdateTask(currentRepititiveTask); // TODO should delete?
                         isNewTask = false;
                     }
                 }
 
                 if (isNewTask)
-                    CreateNewTask(currentDailyTaskGroup, repititiveTaskToUpdateAccordingly);
+                    CreateNewTask(currentTaskGroup, repititiveTaskToUpdateAccordingly);
             }
         }
 
-        private void UpdateCurrentTask(ITasksGroup currentDailyTaskGroup, IRepetitiveMeasureableTask currentDailyTask,
-            IRepetitiveMeasureableTask dailyTaskToUpdateAccordingly)
+        private void UpdateCurrentTask(IRepetitiveMeasureableTask currentTask,
+            IRepetitiveMeasureableTask taskToUpdateAccordingly)
         {
-            // TODO check if actual, expected or score was changed.
-            //if (currentDailyTask.)
+            if (currentTask.Expected != taskToUpdateAccordingly.Expected ||
+                currentTask.MeasureType != taskToUpdateAccordingly.MeasureType)
+            {
+                currentTask.Expected = taskToUpdateAccordingly.Expected;
+                currentTask.MeasureType = taskToUpdateAccordingly.MeasureType;
+            }
         }
 
-        private void CreateNewTask(ITasksGroup currentDailyTaskGroup, IRepetitiveMeasureableTask dailyTaskToUpdateAccordingly)
+        private void CreateNewTask(ITasksGroup currentTaskGroup, IRepetitiveMeasureableTask taskToUpdateAccordingly)
         {
             OperationResult<IWorkTask> newTaskResult =
-                        mTaskGroupFactory.CreateTask(currentDailyTaskGroup, dailyTaskToUpdateAccordingly.Description);
+                        mTaskGroupFactory.CreateTask(currentTaskGroup, taskToUpdateAccordingly.Description);
 
             if (!newTaskResult.Success ||
                 !(newTaskResult.Value is IRepetitiveMeasureableTask repetitiveMeasureableTask))
@@ -112,22 +127,12 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
                 return;
             }
 
-            repetitiveMeasureableTask.InitializeRepetitiveMeasureableTask(dailyTaskToUpdateAccordingly.Frequency,
-                dailyTaskToUpdateAccordingly.MeasureType,
-                dailyTaskToUpdateAccordingly.Expected,
+            repetitiveMeasureableTask.InitializeRepetitiveMeasureableTask(taskToUpdateAccordingly.Frequency,
+                taskToUpdateAccordingly.MeasureType,
+                taskToUpdateAccordingly.Expected,
                 score: 1);
+
+            currentTaskGroup.UpdateTask(repetitiveMeasureableTask); // TODO should delete?
         }
-
-        // TODO
-        //private async Task UpdateWeeklyTasks(IEnumerable<IWorkTask> weeklyTasks)
-        //{
-
-        //}
-
-        // TODO
-        //private async Task UpdateMonthlyTasks(IEnumerable<IWorkTask> monthlyTasks)
-        //{
-
-        //}
     }
 }
