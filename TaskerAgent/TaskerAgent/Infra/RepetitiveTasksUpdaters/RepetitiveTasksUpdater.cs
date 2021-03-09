@@ -37,36 +37,22 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
         {
             TasksCluster tasksCluster = TasksCluster.SplitTaskGroupByFrequency(tasksGroupToUpdateAccordingly);
 
-            // TODO UpdateTasks - return groups.
-            await UpdateTasks(tasksCluster.DailyTasks).ConfigureAwait(false);
-            await UpdateTasks(tasksCluster.WeeklyTasks).ConfigureAwait(false);
-            await UpdateTasks(tasksCluster.MonthlyTasks).ConfigureAwait(false);
-
-            await mTasksGroupRepository.UpdateAsync(returnedGroups).ConfigureAwait(false);
+            await UpdateDailyTasks(tasksCluster.DailyTasks).ConfigureAwait(false);
+            await UpdateWeeklyTasks(tasksCluster.WeeklyTasks).ConfigureAwait(false); // TODO put on days according to occoranceDay.
+            //await UpdateMonthlyTasks(tasksCluster.MonthlyTasks).ConfigureAwait(false); // TODO put on the last day of the month.
         }
 
-        private async Task UpdateTasks(IEnumerable<IWorkTask> dailyTasksToUpdateAccordingly)
+        private async Task UpdateDailyTasks(IEnumerable<IWorkTask> dailyTasksToUpdateAccordingly)
         {
             foreach (DateTime date in GetNextDaysDates(mTaskerAgentOptions.CurrentValue.DaysToKeepForward))
             {
                 string groupName = date.ToString(TimeConsts.TimeFormat);
 
-                ITasksGroup taskGroup =
-                    await mTasksGroupRepository.FindAsync(groupName).ConfigureAwait(false);
+                ITasksGroup dailyTaskGroup =
+                    await mTasksGroupRepository.FindAsync(groupName).ConfigureAwait(false) ??
+                    await AddNewGroup(groupName).ConfigureAwait(false);
 
-                if (taskGroup == null)
-                {
-                    OperationResult<ITasksGroup> taskGroupResult = mTaskGroupFactory.CreateGroup(groupName);
-                    if (!taskGroupResult.Success)
-                    {
-                        mLogger.LogError($"Could not create group {groupName}");
-                        continue;
-                    }
-
-                    taskGroup = taskGroupResult.Value;
-                }
-
-                UpdateGroup(taskGroup, dailyTasksToUpdateAccordingly);
+                await UpdateGroup(dailyTaskGroup, dailyTasksToUpdateAccordingly).ConfigureAwait(false);
             }
         }
 
@@ -78,7 +64,20 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
             }
         }
 
-        private void UpdateGroup(ITasksGroup currentTaskGroup, IEnumerable<IWorkTask> tasksToUpdateAccordingly)
+        private async Task<ITasksGroup> AddNewGroup(string groupName)
+        {
+            OperationResult<ITasksGroup> taskGroupResult = mTaskGroupFactory.CreateGroup(groupName);
+            if (!taskGroupResult.Success)
+            {
+                mLogger.LogError($"Could not create group {groupName}");
+                return null;
+            }
+
+            await mTasksGroupRepository.AddAsync(taskGroupResult.Value).ConfigureAwait(false);
+            return taskGroupResult.Value;
+        }
+
+        private async Task UpdateGroup(ITasksGroup currentTaskGroup, IEnumerable<IWorkTask> tasksToUpdateAccordingly)
         {
             foreach (IWorkTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
             {
@@ -95,7 +94,6 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
                     if (taskToUpdateAccordingly.Description.Equals(currentTask.Description, StringComparison.OrdinalIgnoreCase))
                     {
                         UpdateCurrentTask(currentRepititiveTask, repititiveTaskToUpdateAccordingly);
-                        currentTaskGroup.UpdateTask(currentRepititiveTask); // TODO should delete?
                         isNewTask = false;
                     }
                 }
@@ -103,6 +101,8 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
                 if (isNewTask)
                     CreateNewTask(currentTaskGroup, repititiveTaskToUpdateAccordingly);
             }
+
+            await mTasksGroupRepository.UpdateAsync(currentTaskGroup).ConfigureAwait(false);
         }
 
         private void UpdateCurrentTask(IRepetitiveMeasureableTask currentTask,
@@ -131,8 +131,6 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
                 taskToUpdateAccordingly.MeasureType,
                 taskToUpdateAccordingly.Expected,
                 score: 1);
-
-            currentTaskGroup.UpdateTask(repetitiveMeasureableTask); // TODO should delete?
         }
     }
 }
