@@ -7,6 +7,7 @@ using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskerAgent.App.RepetitiveTasks;
 using TaskerAgent.Domain;
+using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.TasksParser;
@@ -33,7 +34,8 @@ namespace TaskerAgantTests.Infra.TasksParser
             IOptionsMonitor<TaskerAgentConfiguration> configuration =
                 mServiceProvider.GetRequiredService<IOptionsMonitor<TaskerAgentConfiguration>>();
 
-            RepetitiveTasksParser parser = new RepetitiveTasksParser(groupsFactory, configuration, NullLogger<RepetitiveTasksParser>.Instance);
+            RepetitiveTasksParser parser = new RepetitiveTasksParser(
+                groupsFactory, new TasksProducerFactory(), configuration, NullLogger<RepetitiveTasksParser>.Instance);
             parser.ParseIntoGroup(group);
             List<IWorkTask> repetitiveTasks = group.GetAllTasks().ToList();
 

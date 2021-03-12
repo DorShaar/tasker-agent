@@ -5,9 +5,9 @@ using ObjectSerializer.JsonService;
 using System.IO;
 using TaskData;
 using TaskData.TasksGroups;
-using TaskData.WorkTasks;
 using TaskerAgent.App.Persistence.Repositories;
-using TaskerAgent.Domain.RepetitiveTasks;
+using TaskerAgent.App.TasksProducers;
+using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
 using TaskerAgent.Infra.Context;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Persistence.Repositories;
@@ -53,7 +53,7 @@ namespace TaskerAgent.Infra.Extensions
         {
             services.UseJsonObjectSerializer();
             services.UseTaskerDataEntities();
-            services.AddSingleton<IWorkTaskProducer, RepetetiveTaskProducer>();
+            services.AddSingleton<ITasksProducerFactory, TasksProducerFactory>();
         }
 
         private static void RegisterLogger(IServiceCollection services)

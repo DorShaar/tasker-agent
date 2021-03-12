@@ -8,7 +8,7 @@ namespace TaskerAgent.Domain
         EveryDay = 0,
         Sunday = 1,
         Monday = 2,
-        Tuedsay = 4,
+        Tuesday = 4,
         Wednesday = 8,
         Thursday = 16,
         Friday = 32,

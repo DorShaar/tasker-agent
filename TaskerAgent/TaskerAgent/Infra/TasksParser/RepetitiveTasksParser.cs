@@ -6,7 +6,7 @@ using System.IO;
 using TaskData.OperationResults;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
-using TaskerAgent.App.RepetitiveTasks;
+using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;
 using TaskerAgent.Infra.Options.Configurations;
 
@@ -15,13 +15,17 @@ namespace TaskerAgent.Infra.TasksParser
     public class RepetitiveTasksParser
     {
         private readonly ITasksGroupFactory mTaskGroupFactory;
+        private readonly ITasksProducerFactory mTasksProducerFactory;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
         private readonly ILogger<RepetitiveTasksParser> mLogger;
 
-        public RepetitiveTasksParser(ITasksGroupFactory taskGroupFactory, IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
+        public RepetitiveTasksParser(ITasksGroupFactory taskGroupFactory,
+            ITasksProducerFactory tasksProducerFactory,
+            IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
             ILogger<RepetitiveTasksParser> logger)
         {
             mTaskGroupFactory = taskGroupFactory ?? throw new ArgumentNullException(nameof(taskGroupFactory));
+            mTasksProducerFactory = tasksProducerFactory ?? throw new ArgumentNullException(nameof(tasksProducerFactory));
             mTaskerAgentOptions = taskerAgentOptions ?? throw new ArgumentNullException(nameof(taskerAgentOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -47,15 +51,6 @@ namespace TaskerAgent.Infra.TasksParser
                 string expectedString = parameters[2];
                 string measureTypeString = parameters[3];
 
-                OperationResult<IWorkTask> createTaskResult = mTaskGroupFactory.CreateTask(taskGroup, taskDescription);
-
-                if (!createTaskResult.Success ||
-                    !(createTaskResult.Value is IRepetitiveMeasureableTask repetitiveMeasureableTask))
-                {
-                    taskGroup.RemoveTask(createTaskResult.Value.ID);
-                    return;
-                }
-
                 if (!Enum.TryParse(frequencyString, ignoreCase: true, out Frequency frequency))
                     return;
 
@@ -65,7 +60,14 @@ namespace TaskerAgent.Infra.TasksParser
                 if (!int.TryParse(expectedString, out int expected))
                     return;
 
-                repetitiveMeasureableTask.InitializeRepetitiveMeasureableTask(frequency, measureType, expected, score: 1);
+                IWorkTaskProducer taskProducer =
+                    mTasksProducerFactory.CreateProducer(frequency, measureType, expected, score: 1);
+
+                OperationResult<IWorkTask> createTaskResult =
+                    mTaskGroupFactory.CreateTask(taskGroup, taskDescription, taskProducer);
+
+                if (!createTaskResult.Success)
+                    mLogger.LogError($"Could not create task {taskDescription}");
             }
             catch (IndexOutOfRangeException ex)
             {
