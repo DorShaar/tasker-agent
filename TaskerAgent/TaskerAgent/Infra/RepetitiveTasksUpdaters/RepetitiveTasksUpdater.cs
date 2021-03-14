@@ -9,7 +9,7 @@ using TaskData.WorkTasks;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.RepetitiveTasks;
 using TaskerAgent.App.TasksProducers;
-using TaskerAgent.Domain;
+using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksClusters;
 using TaskerAgent.Infra.Options.Configurations;
 using Triangle.Time;
@@ -51,7 +51,7 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
 
                 await UpdateDailyTasks(taskGroup, tasksCluster.DailyTasks).ConfigureAwait(false);
                 await UpdateWeeklyTasks(taskGroup, tasksCluster.WeeklyTasks, date).ConfigureAwait(false);
-                //await UpdateMonthlyTasks(tasksCluster.MonthlyTasks).ConfigureAwait(false); // TODO put on the last day of the month.
+                await UpdateMonthlyTasks(taskGroup, tasksCluster.MonthlyTasks, date).ConfigureAwait(false);
             }
         }
 
@@ -80,7 +80,7 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
         {
             foreach (IWorkTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
             {
-                if (!(taskToUpdateAccordingly is IRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
+                if (!(taskToUpdateAccordingly is DailyRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
                     continue;
 
                 UpdateGroup(currentTaskGroup, repititiveTaskToUpdateAccordingly);
@@ -94,12 +94,10 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
         {
             foreach (IWorkTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
             {
-                if (!(taskToUpdateAccordingly is IRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
+                if (!(taskToUpdateAccordingly is WeeklyRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
                     continue;
 
-                if (IsDayIsOneOfOccurrence(
-                    repititiveTaskToUpdateAccordingly.FromDayOfWeek(date.DayOfWeek),
-                    repititiveTaskToUpdateAccordingly.OccurrenceDays))
+                if (repititiveTaskToUpdateAccordingly.IsDayIsOneOfWeeklyOccurrence(date.DayOfWeek))
                 {
                     UpdateGroup(currentTaskGroup, repititiveTaskToUpdateAccordingly);
                 }
@@ -108,9 +106,21 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
             await mTasksGroupRepository.UpdateAsync(currentTaskGroup).ConfigureAwait(false);
         }
 
-        private bool IsDayIsOneOfOccurrence(Days day, Days occurrenceDays)
+        private async Task UpdateMonthlyTasks(ITasksGroup currentTaskGroup, IEnumerable<IWorkTask> tasksToUpdateAccordingly,
+            DateTime date)
         {
-            return (day & occurrenceDays) != 0;
+            foreach (IWorkTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
+            {
+                if (!(taskToUpdateAccordingly is MonthlyRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
+                    continue;
+
+                if (repititiveTaskToUpdateAccordingly.IsDayIsOneOfMonthlyOccurrence(date.Day))
+                {
+                    UpdateGroup(currentTaskGroup, repititiveTaskToUpdateAccordingly);
+                }
+            }
+
+            await mTasksGroupRepository.UpdateAsync(currentTaskGroup).ConfigureAwait(false);
         }
 
         private void UpdateGroup(ITasksGroup currentTaskGroup, IRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly)
@@ -146,17 +156,42 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
 
         private void CreateNewTask(ITasksGroup currentTaskGroup, IRepetitiveMeasureableTask taskToUpdateAccordingly)
         {
-            IWorkTaskProducer taskProducer = mTasksProducerFactory.CreateProducer(
-                taskToUpdateAccordingly.Frequency,
-                taskToUpdateAccordingly.MeasureType,
-                taskToUpdateAccordingly.Expected,
-                score: 1);
+            IWorkTaskProducer taskProducer = CreateTaskProducer(taskToUpdateAccordingly);
+
+            if (taskProducer == null)
+            {
+                mLogger.LogError($"Unexpected task type given {nameof(taskToUpdateAccordingly)}");
+                return;
+            }
 
             OperationResult<IWorkTask> createTaskResult =
                 mTaskGroupFactory.CreateTask(currentTaskGroup, taskToUpdateAccordingly.Description, taskProducer);
 
             if (!createTaskResult.Success)
                 mLogger.LogError($"Could not create task {taskToUpdateAccordingly.Description}");
+        }
+
+        private IWorkTaskProducer CreateTaskProducer(IRepetitiveMeasureableTask taskToUpdateAccordingly)
+        {
+            if (taskToUpdateAccordingly is DailyRepetitiveMeasureableTask dailyTask)
+            {
+                return mTasksProducerFactory.CreateDailyProducer(
+                    dailyTask.Frequency, dailyTask.MeasureType, dailyTask.Expected, score: 1);
+            }
+
+            if (taskToUpdateAccordingly is WeeklyRepetitiveMeasureableTask weeklyTask)
+            {
+                return mTasksProducerFactory.CreateWeeklyProducer(
+                    weeklyTask.Frequency, weeklyTask.MeasureType, weeklyTask.OccurrenceDays, weeklyTask.Expected, score: 1);
+            }
+
+            if (taskToUpdateAccordingly is MonthlyRepetitiveMeasureableTask monthlyTask)
+            {
+                return mTasksProducerFactory.CreateMonthlyProducer(
+                    monthlyTask.Frequency, monthlyTask.MeasureType, monthlyTask.DaysOfMonth, monthlyTask.Expected, score: 1);
+            }
+
+            return null;
         }
     }
 }

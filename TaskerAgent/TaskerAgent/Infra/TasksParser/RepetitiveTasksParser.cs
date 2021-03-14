@@ -44,24 +44,37 @@ namespace TaskerAgent.Infra.TasksParser
 
         private void CreateRepetitiveTaskFromParameters(ITasksGroup taskGroup, string[] parameters)
         {
+            ParseComponents parseComponents = new ParseComponents();
+
             try
             {
                 string taskDescription = parameters[0];
-                string frequencyString = parameters[1];
-                string expectedString = parameters[2];
-                string measureTypeString = parameters[3];
 
-                if (!Enum.TryParse(frequencyString, ignoreCase: true, out Frequency frequency))
+                if (!parseComponents.SetFrequency(parameters[1]))
                     return;
 
-                if (!Enum.TryParse(measureTypeString, ignoreCase: true, out MeasureType measureType))
+                if (!parseComponents.SetExpected(parameters[2]))
                     return;
 
-                if (!int.TryParse(expectedString, out int expected))
+                if (!parseComponents.SetMeasureType(parameters[3]))
                     return;
 
-                IWorkTaskProducer taskProducer =
-                    mTasksProducerFactory.CreateProducer(frequency, measureType, expected, score: 1);
+                if (parseComponents.Frequency == Frequency.Weekly)
+                {
+                    if (!parseComponents.SetOccurrenceDays(parameters[4..]))
+                        return;
+                }
+
+                if (parseComponents.Frequency == Frequency.Monthly)
+                {
+                    if (!parseComponents.SetDaysOfMonth(parameters[4..]))
+                        return;
+                }
+
+                IWorkTaskProducer taskProducer = GetWorkTaskProducer(parseComponents);
+
+                if (taskProducer == null)
+                    return;
 
                 OperationResult<IWorkTask> createTaskResult =
                     mTaskGroupFactory.CreateTask(taskGroup, taskDescription, taskProducer);
@@ -73,6 +86,29 @@ namespace TaskerAgent.Infra.TasksParser
             {
                 mLogger.LogError(ex, "Failed to Parse");
             }
+        }
+
+        private IWorkTaskProducer GetWorkTaskProducer(ParseComponents parseComponents)
+        {
+            if (parseComponents.Frequency == Frequency.Daily)
+            {
+                return mTasksProducerFactory.CreateDailyProducer(
+                    parseComponents.Frequency, parseComponents.MeasureType, parseComponents.Expected, score: 1);
+            }
+
+            if (parseComponents.Frequency == Frequency.Weekly)
+            {
+                return mTasksProducerFactory.CreateWeeklyProducer(
+                    parseComponents.Frequency, parseComponents.MeasureType, parseComponents.OccurrenceDays, parseComponents.Expected, score: 1);
+            }
+
+            if (parseComponents.Frequency == Frequency.Monthly)
+            {
+                return mTasksProducerFactory.CreateMonthlyProducer(
+                    parseComponents.Frequency, parseComponents.MeasureType, parseComponents.DaysOfMonth, parseComponents.Expected, score: 1);
+            }
+
+            return null;
         }
     }
 }

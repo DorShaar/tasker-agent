@@ -1,27 +1,28 @@
-﻿using TaskData.WorkTasks;
+﻿using System.Collections.Generic;
+using TaskData.WorkTasks;
 
 namespace TaskerAgent.Domain.RepetitiveTasks.TasksProducers
 {
-    public class WeeklyRepetetiveTaskProducer : IWorkTaskProducer
+    public class MonthlyRepetetiveTaskProducer : IWorkTaskProducer
     {
         public Frequency Frequency { get; }
         public MeasureType MeasureType { get; }
-        public Days OccurrenceDays { get; }
+        public List<int> DaysOfMonth { get; }
         public int Expected { get; }
         public int Score { get; }
 
-        public WeeklyRepetetiveTaskProducer(Frequency frequency, MeasureType measureType, Days occurrenceDays, int expected, int score)
+        public MonthlyRepetetiveTaskProducer(Frequency frequency, MeasureType measureType, List<int> daysOfMonth, int expected, int score)
         {
             Frequency = frequency;
             MeasureType = measureType;
-            OccurrenceDays = occurrenceDays;
+            DaysOfMonth = daysOfMonth;
             Expected = expected;
             Score = score;
         }
 
         public IWorkTask ProduceTask(string id, string description)
         {
-            return new WeeklyRepetitiveMeasureableTask(id, description, Frequency, MeasureType, OccurrenceDays, Expected, Score);
+            return new MonthlyRepetitiveMeasureableTask(id, description, Frequency, MeasureType, DaysOfMonth, Expected, Score);
         }
     }
 }

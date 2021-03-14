@@ -1,46 +1,51 @@
 ﻿using Newtonsoft.Json;
-using System;
+using System.Collections.Generic;
 using TaskData.TaskStatus;
 using Triangle;
 
 namespace TaskerAgent.Domain.RepetitiveTasks
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class WeeklyRepetitiveMeasureableTask : GeneralRepetitiveMeasureableTask
+    public class MonthlyRepetitiveMeasureableTask : GeneralRepetitiveMeasureableTask
     {
         [JsonProperty]
-        public new Days OccurrenceDays { get; }
+        public List<int> DaysOfMonth { get; } = new List<int>();
 
-        internal WeeklyRepetitiveMeasureableTask(string id, string description,
+        internal MonthlyRepetitiveMeasureableTask(string id, string description,
             Frequency frequency,
             MeasureType measureType,
-            Days occurrenceDays,
+            List<int> daysOfMonth,
             int expected,
             int score) : base(id, description, frequency, measureType, expected, score)
         {
-            OccurrenceDays = occurrenceDays;
+            foreach(int dayOfMonth in daysOfMonth)
+            {
+                if (dayOfMonth <= 0 || dayOfMonth >= 31)
+                    continue;
+
+                DaysOfMonth.Add(dayOfMonth);
+            }
         }
 
         [JsonConstructor]
-        internal WeeklyRepetitiveMeasureableTask(string id,
+        internal MonthlyRepetitiveMeasureableTask(string id,
             string groupName,
             string description,
             ITaskStatusHistory taskStatusHistory,
             TaskTriangle taskTriangle,
             Frequency frequency,
             MeasureType measureType,
-            Days occurrenceDays,
+            List<int> daysOfMonth,
             int expected,
             int actual,
             int score) : base(id, groupName, description, taskStatusHistory, taskTriangle, frequency, measureType, expected, actual, score)
         {
-            OccurrenceDays = occurrenceDays;
+            DaysOfMonth = daysOfMonth;
         }
 
-        public bool IsDayIsOneOfWeeklyOccurrence(DayOfWeek dayOfWeek)
+        public bool IsDayIsOneOfMonthlyOccurrence(int dayOfMonth)
         {
-            Days day = FromDayOfWeek(dayOfWeek);
-            return (day & OccurrenceDays) != 0;
+            return DaysOfMonth.Contains(dayOfMonth);
         }
     }
 }

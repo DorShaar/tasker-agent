@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
-using TaskerAgent.App.RepetitiveTasks;
 using TaskerAgent.Domain;
+using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
@@ -39,11 +39,13 @@ namespace TaskerAgantTests.Infra.TasksParser
             parser.ParseIntoGroup(group);
             List<IWorkTask> repetitiveTasks = group.GetAllTasks().ToList();
 
-            if (!(repetitiveTasks[0] is IRepetitiveMeasureableTask repetitiveMeasureableTask0) ||
-                !(repetitiveTasks[1] is IRepetitiveMeasureableTask repetitiveMeasureableTask1) ||
-                !(repetitiveTasks[2] is IRepetitiveMeasureableTask repetitiveMeasureableTask2) ||
-                !(repetitiveTasks[3] is IRepetitiveMeasureableTask repetitiveMeasureableTask3) ||
-                !(repetitiveTasks[4] is IRepetitiveMeasureableTask repetitiveMeasureableTask4))
+            if (!(repetitiveTasks[0] is DailyRepetitiveMeasureableTask repetitiveMeasureableTask0)     ||
+                !(repetitiveTasks[1] is DailyRepetitiveMeasureableTask repetitiveMeasureableTask1)     ||
+                !(repetitiveTasks[2] is WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask2)    ||
+                !(repetitiveTasks[3] is WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask3)    ||
+                !(repetitiveTasks[4] is DailyRepetitiveMeasureableTask repetitiveMeasureableTask4)     ||
+                !(repetitiveTasks[5] is MonthlyRepetitiveMeasureableTask repetitiveMeasureableTask5)   ||
+                !(repetitiveTasks[6] is WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask6))
             {
                 Assert.False(true);
                 return;
@@ -60,6 +62,10 @@ namespace TaskerAgantTests.Infra.TasksParser
             Assert.Equal("Eat bamba", repetitiveMeasureableTask3.Description);
 
             Assert.Equal("Sleep hours", repetitiveMeasureableTask4.Description);
+
+            Assert.Equal(22, repetitiveMeasureableTask5.DaysOfMonth[0]);
+
+            Assert.Equal(Days.Wednesday | Days.Friday, repetitiveMeasureableTask6.OccurrenceDays);
         }
     }
 }
