@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using TaskData.WorkTasks;
 using TaskerAgent.Infra.Extensions;
@@ -17,6 +19,10 @@ namespace TaskerAgantTests.Infra.Services
             IServiceCollection serviceCollection = new ServiceCollection();
             serviceCollection.UseDI();
             mServiceProvider = serviceCollection.BuildServiceProvider();
+
+            TaskerAgentService service = mServiceProvider.GetRequiredService<TaskerAgentService>();
+
+            service.UpdateRepetitiveTasks().ConfigureAwait(false);
         }
 
         [Fact]
@@ -24,9 +30,11 @@ namespace TaskerAgantTests.Infra.Services
         {
             TaskerAgentService service = mServiceProvider.GetRequiredService<TaskerAgentService>();
 
-            IEnumerable<IWorkTask> todaysTasks = await service.GetTodaysTasks().ConfigureAwait(false);
+            IEnumerable<IWorkTask> todaysTasks = (await service.GetTodaysTasks().ConfigureAwait(false));
 
-            Assert.True(false);
+            Assert.Contains(todaysTasks, task => task.Description.Equals("Drink Water", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(todaysTasks, task => task.Description.Equals("Exercise", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(todaysTasks, task => task.Description.Equals("Sleep hours", StringComparison.OrdinalIgnoreCase));
         }
 
         [Fact]
@@ -36,17 +44,23 @@ namespace TaskerAgantTests.Infra.Services
 
             IEnumerable<IWorkTask> thisWeekTasks = await service.GetThisWeekTasks().ConfigureAwait(false);
 
-            Assert.True(false);
-        }
+            IEnumerable<IWorkTask> drinkWaterTasks = thisWeekTasks.Where(task => task.Description.Equals("Drink Water", StringComparison.OrdinalIgnoreCase));
+            Assert.True(drinkWaterTasks.Count() == 7);
 
-        [Fact]
-        public async Task UpdateRepetitiveTasks_AsExpected()
-        {
-            TaskerAgentService service = mServiceProvider.GetRequiredService<TaskerAgentService>();
+            IEnumerable<IWorkTask> exerciseTasks = thisWeekTasks.Where(task => task.Description.Equals("Exercise", StringComparison.OrdinalIgnoreCase));
+            Assert.True(exerciseTasks.Count() == 7);
 
-            await service.UpdateRepetitiveTasks().ConfigureAwait(false);
+            IEnumerable<IWorkTask> SleepTasks = thisWeekTasks.Where(task => task.Description.Equals("Sleep hours", StringComparison.OrdinalIgnoreCase));
+            Assert.True(SleepTasks.Count() == 7);
 
-            Assert.True(false);
+            IEnumerable<IWorkTask> flossTasks = thisWeekTasks.Where(task => task.Description.Equals("Floss", StringComparison.OrdinalIgnoreCase));
+            Assert.True(flossTasks.Count() == 3);
+
+            IEnumerable<IWorkTask> eatBambaTasks = thisWeekTasks.Where(task => task.Description.Equals("Eat bamba", StringComparison.OrdinalIgnoreCase));
+            Assert.True(eatBambaTasks.Count() == 1);
+
+            IEnumerable<IWorkTask> runTasks = thisWeekTasks.Where(task => task.Description.Equals("Run", StringComparison.OrdinalIgnoreCase));
+            Assert.True(runTasks.Count() == 2);
         }
     }
 }

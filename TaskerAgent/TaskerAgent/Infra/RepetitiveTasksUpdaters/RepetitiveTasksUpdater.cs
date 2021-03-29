@@ -86,7 +86,7 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
                 UpdateGroup(currentTaskGroup, repititiveTaskToUpdateAccordingly);
             }
 
-            await mTasksGroupRepository.UpdateAsync(currentTaskGroup).ConfigureAwait(false);
+            await mTasksGroupRepository.AddOrUpdateAsync(currentTaskGroup).ConfigureAwait(false);
         }
 
         private async Task UpdateWeeklyTasks(ITasksGroup currentTaskGroup, IEnumerable<IWorkTask> tasksToUpdateAccordingly,
@@ -103,7 +103,7 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
                 }
             }
 
-            await mTasksGroupRepository.UpdateAsync(currentTaskGroup).ConfigureAwait(false);
+            await mTasksGroupRepository.AddOrUpdateAsync(currentTaskGroup).ConfigureAwait(false);
         }
 
         private async Task UpdateMonthlyTasks(ITasksGroup currentTaskGroup, IEnumerable<IWorkTask> tasksToUpdateAccordingly,
@@ -120,7 +120,7 @@ namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
                 }
             }
 
-            await mTasksGroupRepository.UpdateAsync(currentTaskGroup).ConfigureAwait(false);
+            await mTasksGroupRepository.AddOrUpdateAsync(currentTaskGroup).ConfigureAwait(false);
         }
 
         private void UpdateGroup(ITasksGroup currentTaskGroup, IRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly)

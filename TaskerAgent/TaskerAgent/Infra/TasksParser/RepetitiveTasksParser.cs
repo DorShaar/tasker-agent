@@ -51,30 +51,48 @@ namespace TaskerAgent.Infra.TasksParser
                 string taskDescription = parameters[0];
 
                 if (!parseComponents.SetFrequency(parameters[1]))
+                {
+                    mLogger.LogError($"Could not set frequency for task {taskDescription}");
                     return;
+                }
 
                 if (!parseComponents.SetExpected(parameters[2]))
+                {
+                    mLogger.LogError($"Could not set expected for task {taskDescription}");
                     return;
+                }
 
                 if (!parseComponents.SetMeasureType(parameters[3]))
+                {
+                    mLogger.LogError($"Could not set measure type for task {taskDescription}");
                     return;
+                }
 
                 if (parseComponents.Frequency == Frequency.Weekly)
                 {
                     if (!parseComponents.SetOccurrenceDays(parameters[4..]))
+                    {
+                        mLogger.LogError($"Could not set OccurrenceDays for task {taskDescription}");
                         return;
+                    }
                 }
 
                 if (parseComponents.Frequency == Frequency.Monthly)
                 {
                     if (!parseComponents.SetDaysOfMonth(parameters[4..]))
+                    {
+                        mLogger.LogError($"Could not set days of month for task {taskDescription}");
                         return;
+                    }
                 }
 
                 IWorkTaskProducer taskProducer = GetWorkTaskProducer(parseComponents);
 
                 if (taskProducer == null)
+                {
+                    mLogger.LogError($"Could not create task producer for task {taskDescription}");
                     return;
+                }
 
                 OperationResult<IWorkTask> createTaskResult =
                     mTaskGroupFactory.CreateTask(taskGroup, taskDescription, taskProducer);

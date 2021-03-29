@@ -9,8 +9,10 @@ using TaskData.IDsProducer;
 using TaskData.TasksGroups;
 using TaskerAgent.Infra.Consts;
 using TaskerAgent.Infra.Options.Configurations;
+using TaskerAgent.Infra.Persistence.Context.Serialization;
+using static ObjectSerializer.JsonService.JsonSerializerWrapper;
 
-namespace TaskerAgent.Infra.Context
+namespace TaskerAgent.Infra.Persistence.Context
 {
     public class AppDbContext
     {
@@ -20,9 +22,6 @@ namespace TaskerAgent.Infra.Context
         private readonly ILogger<AppDbContext> mLogger;
 
         private readonly string NextIdPath;
-        private readonly string mDatabaseFilePath;
-
-        public List<ITasksGroup> Entities { get; private set; } = new List<ITasksGroup>();
 
         public AppDbContext(IOptionsMonitor<TaskerAgentConfiguration> configuration,
             IObjectSerializer serializer,
@@ -41,15 +40,32 @@ namespace TaskerAgent.Infra.Context
                 return;
             }
 
-            mDatabaseFilePath = Path.Combine(mConfiguration.CurrentValue.DatabaseDirectoryPath, AppConsts.DatabaseName);
             NextIdPath = Path.Combine(mConfiguration.CurrentValue.DatabaseDirectoryPath, AppConsts.NextIdHolderName);
+            InitializeSerializer();
+        }
+
+        private void InitializeSerializer()
+        {
+            mSerializer.RegisterConverters(new TaskGroupConverter());
+            mSerializer.RegisterConverters(new TaskStatusHistoryConverter());
+            mSerializer.RegisterConverters(new RepetitiveTaskConverter());
+        }
+
+        public IEnumerable<string> ListGroupsNames()
+        {
+            foreach (string groupName in Directory.EnumerateFiles(mConfiguration.CurrentValue.DatabaseDirectoryPath))
+            {
+                if (groupName == AppConsts.NextIdHolderName)
+                    continue;
+
+                yield return groupName;
+            }
         }
 
         public async Task LoadDatabase()
         {
             try
             {
-                await LoadTasksGroups().ConfigureAwait(false);
                 await LoadNextIdToProduce().ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -58,16 +74,18 @@ namespace TaskerAgent.Infra.Context
             }
         }
 
-        private async Task LoadTasksGroups()
+        public async Task<ITasksGroup> FindAsync(string entityToFind)
         {
-            if (!File.Exists(mDatabaseFilePath))
+            string databasePath = GetDatabasePath(entityToFind);
+
+            if (!File.Exists(databasePath))
             {
-                mLogger.LogError($"Database file {mDatabaseFilePath} does not exists");
-                throw new FileNotFoundException("Database does not exists", mDatabaseFilePath);
+                mLogger.LogError($"Could not find database file {databasePath}");
+                return null;
             }
 
-            mLogger.LogDebug($"Going to load database from {mDatabaseFilePath}");
-            Entities = await mSerializer.Deserialize<List<ITasksGroup>>(mDatabaseFilePath)
+            mLogger.LogDebug($"Going to load database from {databasePath}");
+            return await mSerializer.Deserialize<ITasksGroup>(databasePath)
                 .ConfigureAwait(false);
         }
 
@@ -83,9 +101,11 @@ namespace TaskerAgent.Infra.Context
             mIdProducer.SetNextID(await mSerializer.Deserialize<int>(NextIdPath).ConfigureAwait(false));
         }
 
-        public async Task SaveCurrentDatabase()
+        public async Task SaveCurrentDatabase(ITasksGroup newGroup)
         {
-            if (string.IsNullOrEmpty(mDatabaseFilePath))
+            string databasePath = GetDatabasePath(newGroup.Name);
+
+            if (string.IsNullOrEmpty(databasePath))
             {
                 mLogger.LogError("No database path was given");
                 return;
@@ -99,7 +119,7 @@ namespace TaskerAgent.Infra.Context
 
             try
             {
-                await SaveTasksGroups().ConfigureAwait(false);
+                await SaveTasksGroups(newGroup, databasePath).ConfigureAwait(false);
                 await SaveNextId().ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -108,9 +128,18 @@ namespace TaskerAgent.Infra.Context
             }
         }
 
-        private async Task SaveTasksGroups()
+        private string GetDatabasePath(string groupName)
         {
-            await mSerializer.Serialize(Entities, mDatabaseFilePath).ConfigureAwait(false);
+            string databaseName = groupName.Replace('\\', '-');
+            databaseName = databaseName.Replace('/', '-');
+
+            return Path.Combine(mConfiguration.CurrentValue.DatabaseDirectoryPath, databaseName);
+        }
+
+        private async Task SaveTasksGroups(ITasksGroup newGroup, string databasePath)
+        {
+            mLogger.LogDebug($"Saving group {newGroup.Name} into path {databasePath}");
+            await mSerializer.Serialize(newGroup, databasePath).ConfigureAwait(false);
         }
 
         private async Task SaveNextId()

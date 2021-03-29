@@ -1,12 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using TaskData.TasksGroups;
-using TaskData.WorkTasks;
 using TaskerAgent.App.Persistence.Repositories;
-using TaskerAgent.Infra.Context;
+using TaskerAgent.Infra.Persistence.Context;
 
 namespace TaskerAgent.Infra.Persistence.Repositories
 {
@@ -23,79 +21,51 @@ namespace TaskerAgent.Infra.Persistence.Repositories
 
         public async Task<bool> AddAsync(ITasksGroup newGroup)
         {
-            await mDatabase.LoadDatabase().ConfigureAwait(false);
-
-            if (mDatabase.Entities.Contains(newGroup) ||
-               (mDatabase.Entities.Find(entity => entity.ID == newGroup.ID) != null))
-            {
-                mLogger.LogError($"Group ID: {newGroup.ID} is already found in database");
-                return false;
-            }
-
-            if (mDatabase.Entities.Find(entity => entity.Name == newGroup.Name) != null)
+            if (await mDatabase.FindAsync(newGroup.Name).ConfigureAwait(false) != null)
             {
                 mLogger.LogError($"Group name: {newGroup.Name} is already found in database");
                 return false;
             }
 
-            mDatabase.Entities.Add(newGroup);
-
-            await mDatabase.SaveCurrentDatabase().ConfigureAwait(false);
+            await mDatabase.SaveCurrentDatabase(newGroup).ConfigureAwait(false);
             return true;
         }
 
-        public async Task<IEnumerable<ITasksGroup>> ListAsync()
+        /// <summary>
+        /// List all tasks group names only
+        /// </summary>
+        public Task<IEnumerable<string>> ListAsync()
         {
-            await mDatabase.LoadDatabase().ConfigureAwait(false);
-
-            return mDatabase.Entities.AsEnumerable();
+            return Task.FromResult(mDatabase.ListGroupsNames());
         }
 
         public async Task<ITasksGroup> FindAsync(string entityToFind)
         {
-            await mDatabase.LoadDatabase().ConfigureAwait(false);
-
-            ITasksGroup entityFound =
-                mDatabase.Entities.Find(entity => entity.ID == entityToFind) ??
-                mDatabase.Entities.Find(entity => entity.Name == entityToFind);
-
-            return entityFound;
+            return await mDatabase.FindAsync(entityToFind).ConfigureAwait(false);
         }
 
-        public async Task UpdateAsync(ITasksGroup newGroup)
+        public async Task<bool> AddOrUpdateAsync(ITasksGroup newGroup)
         {
-            int tasksGroupToUpdateIndex = mDatabase.Entities.FindIndex(entity => entity.ID == newGroup.ID);
-
-            if (tasksGroupToUpdateIndex < 0)
-            {
-                mLogger.LogError($"Group ID: {newGroup.ID} Group name: {newGroup.Name} - No such entity was found in database");
-                return;
-            }
-
-            mDatabase.Entities[tasksGroupToUpdateIndex] = newGroup;
-
-            await mDatabase.SaveCurrentDatabase().ConfigureAwait(false);
-            return;
+            await mDatabase.SaveCurrentDatabase(newGroup).ConfigureAwait(false);
+            return true;
         }
 
-        public async Task RemoveAsync(ITasksGroup group)
+        public Task RemoveAsync(ITasksGroup group)
         {
-            if (!mDatabase.Entities.Contains(group))
-            {
-                mLogger.LogError($"Group ID: {group.ID} Group name: {group.Name} - No such entity was found in database");
-                return;
-            }
+            mLogger.LogError("Not impemented yet");
+            return Task.CompletedTask;
 
-            foreach (IWorkTask task in group.GetAllTasks())
-            {
-                mLogger.LogDebug($"Removing inner task id {task.ID} description {task.Description}");
-            }
+            // TODO
+            //if (await mDatabase.FindAsync(group.Name).ConfigureAwait(false) == null)
+            //{
+            //    mLogger.LogError($"Group ID: {group.ID} Group name: {group.Name} - No such entity was found in database");
+            //    return;
+            //}
 
-            mDatabase.Entities.Remove(group);
-            mLogger.LogDebug($"Task group id {group.ID} group name {group.Name} removed");
-
-            await mDatabase.SaveCurrentDatabase().ConfigureAwait(false);
-            return;
+            //foreach (IWorkTask task in group.GetAllTasks())
+            //{
+            //    mLogger.LogDebug($"Removing inner task id {task.ID} description {task.Description}");
+            //}
         }
     }
 }

@@ -43,9 +43,6 @@ namespace TaskerAgent.Infra.TasksParser
         {
             DaysOfMonth = new List<int>();
 
-            if (daysStrings.Length == 1 && daysStrings[0] == string.Empty)
-                return true;
-
             foreach (string dayString in daysStrings)
             {
                 if (!int.TryParse(dayString, out int day))
@@ -59,9 +56,6 @@ namespace TaskerAgent.Infra.TasksParser
 
         public bool SetOccurrenceDays(string[] daysStrings)
         {
-            if (daysStrings.Length == 1 && daysStrings[0] == string.Empty)
-                return true;
-
             foreach (string dayString in daysStrings)
             {
                 if (!Enum.TryParse(dayString, ignoreCase: true, out Days day))
