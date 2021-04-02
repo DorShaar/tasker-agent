@@ -14,7 +14,7 @@ using TaskerAgent.Domain.RepetitiveTasks.TasksClusters;
 using TaskerAgent.Infra.Options.Configurations;
 using Triangle.Time;
 
-namespace TaskerAgent.Infra.RepetitiveTasksUpdaters
+namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
 {
     public class RepetitiveTasksUpdater
     {

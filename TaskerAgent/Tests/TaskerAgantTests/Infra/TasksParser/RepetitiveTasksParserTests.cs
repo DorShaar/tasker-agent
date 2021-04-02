@@ -10,7 +10,7 @@ using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
-using TaskerAgent.Infra.TasksParser;
+using TaskerAgent.Infra.Services.TasksParser;
 using Xunit;
 
 namespace TaskerAgantTests.Infra.TasksParser

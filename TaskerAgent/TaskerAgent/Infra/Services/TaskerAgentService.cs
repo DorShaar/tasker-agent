@@ -1,16 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TaskData.OperationResults;
 using TaskData.TasksGroups;
-using TaskData.WorkTasks;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.Infra.Extensions;
-using TaskerAgent.Infra.Options.Configurations;
-using TaskerAgent.Infra.RepetitiveTasksUpdaters;
-using TaskerAgent.Infra.TasksParser;
+using TaskerAgent.Infra.Services.RepetitiveTasksUpdaters;
+using TaskerAgent.Infra.Services.SummaryReporters;
+using TaskerAgent.Infra.Services.TasksParser;
 using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services
@@ -23,60 +21,92 @@ namespace TaskerAgent.Infra.Services
         private readonly ITasksGroupFactory mTaskGroupFactory;
         private readonly RepetitiveTasksUpdater mRepetitiveTasksUpdater;
         private readonly RepetitiveTasksParser mRepetitiveTasksParser;
-        private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
+        private readonly SummaryReporter mSummaryReporter;
         private readonly ILogger<TaskerAgentService> mLogger;
-
-        // TODO every morning writes all the todays tasks.
-        // TODO every Sunday writes all this week tasks.
 
         // TODO calendar tasks + reminders.
         public TaskerAgentService(IDbRepository<ITasksGroup> TaskGroupRepository,
             ITasksGroupFactory tasksGroupFactory,
             RepetitiveTasksUpdater repetitiveTasksUpdater,
             RepetitiveTasksParser repetitiveTasksParser,
-            IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
+            SummaryReporter summaryReporter,
             ILogger<TaskerAgentService> logger)
         {
             mTasksGroupRepository = TaskGroupRepository ?? throw new ArgumentNullException(nameof(TaskGroupRepository));
             mTaskGroupFactory = tasksGroupFactory ?? throw new ArgumentNullException(nameof(tasksGroupFactory));
             mRepetitiveTasksUpdater = repetitiveTasksUpdater ?? throw new ArgumentNullException(nameof(repetitiveTasksUpdater));
             mRepetitiveTasksParser = repetitiveTasksParser ?? throw new ArgumentNullException(nameof(repetitiveTasksParser));
-            mTaskerAgentOptions = taskerAgentOptions ?? throw new ArgumentNullException(nameof(taskerAgentOptions));
+            mSummaryReporter = summaryReporter ?? throw new ArgumentNullException(nameof(summaryReporter));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<IEnumerable<IWorkTask>> GetTodaysTasks()
+        public async Task<string> SendTodaysTasksReport()
         {
-            string todayDate = DateTime.Now.ToString(TimeConsts.TimeFormat);
+            ITasksGroup tasksGroup = await GetTasksByDate(DateTime.Now).ConfigureAwait(false);
 
-            ITasksGroup todaysTasksGroup = await mTasksGroupRepository.FindAsync(todayDate).ConfigureAwait(false);
-
-            if (todaysTasksGroup == null)
-                return null;
-
-            return todaysTasksGroup.GetAllTasks();
-        }
-
-        public async Task<IEnumerable<IWorkTask>> GetThisWeekTasks()
-        {
-            List<IWorkTask> thisWeekTasks = new List<IWorkTask>();
-
-            foreach (DateTime date in GetThisWeekDates())
+            if (tasksGroup == null)
             {
-                ITasksGroup taskGroup = await mTasksGroupRepository.FindAsync(date.ToString(TimeConsts.TimeFormat)).ConfigureAwait(false);
-
-                if (taskGroup == null)
-                    continue;
-
-                thisWeekTasks.AddRange(taskGroup.GetAllTasks());
+                mLogger.LogError("Could not create report for today");
+                return string.Empty;
             }
 
-            return thisWeekTasks;
+            return mSummaryReporter.CreateTodaysFutureTasksReport(tasksGroup);
         }
 
-        private IEnumerable<DateTime> GetThisWeekDates()
+        public async Task<string> SendThisWeekTasksReport()
         {
-            DateTime startOfWeekDate = DateTime.Now.StartOfWeek();
+            IEnumerable<ITasksGroup> thisWeekGroup = await GetThisWeekGroups().ConfigureAwait(false);
+
+            if (thisWeekGroup == null)
+            {
+                mLogger.LogError("Could not create report for this week");
+                return string.Empty;
+            }
+
+            return mSummaryReporter.CreateThisWeekFutureTasksReport(thisWeekGroup);
+        }
+
+        private async Task<IEnumerable<ITasksGroup>> GetThisWeekGroups()
+        {
+            List<ITasksGroup> thisWeekGroups = new List<ITasksGroup>();
+
+            foreach (DateTime date in GetDatesOfWeek())
+            {
+                ITasksGroup tasksGroup = await GetTasksByDate(date).ConfigureAwait(false);
+
+                if (tasksGroup == null)
+                {
+                    mLogger.LogWarning($"Could not find task group of date {date.ToString(TimeConsts.TimeFormat)}");
+                    continue;
+                }
+
+                thisWeekGroups.Add(tasksGroup);
+            }
+
+            return thisWeekGroups;
+        }
+
+        private async Task<ITasksGroup> GetTasksByDate(DateTime date)
+        {
+            string stringDate = date.ToString(TimeConsts.TimeFormat);
+
+            ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(stringDate).ConfigureAwait(false);
+
+            if (tasksGroup == null)
+            {
+                mLogger.LogWarning($"Could not find task group {stringDate}");
+                return null;
+            }
+
+            return tasksGroup;
+        }
+
+        private IEnumerable<DateTime> GetDatesOfWeek(DateTime date = default)
+        {
+            if (date == default)
+                date = DateTime.Now;
+
+            DateTime startOfWeekDate = date.StartOfWeek();
 
             for (int i = 0; i < 7; ++i)
             {
@@ -111,20 +141,48 @@ namespace TaskerAgent.Infra.Services
             return tasksFromConfigGroup;
         }
 
-        // TODO Create summary with score on Saturday.
-        //public async Task<string> SendDailySummary() // tODO
-        //{
+        /// <summary>
+        /// Reports tasks progress for the day of the given date.
+        /// </summary>
+        /// <param name="date"></param>
+        public async Task<string> SendDailySummary(DateTime date)
+        {
+            string dateString = date.ToString(TimeConsts.TimeFormat);
 
-        //}
+            ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(dateString).ConfigureAwait(false);
 
-        //public async Task<string> SendWeeklySummary() // tODO
-        //{
+            if (tasksGroup == null)
+            {
+                mLogger.LogError($"Could not find task group {dateString}. Could not generate report");
+                return string.Empty;
+            }
 
-        //}
+            return mSummaryReporter.CreateDailySummaryReport(tasksGroup);
+        }
 
-        //public async Task<string> SendMonthlySummary() // tODO
-        //{
+        /// <summary>
+        /// Reports tasks progress for the week of the given date.
+        /// </summary>
+        public async Task<string> SendWeeklySummary(DateTime dateOfTheWeek)
+        {
+            List<ITasksGroup> weeklyGroups = new List<ITasksGroup>(7);
 
-        //}
+            foreach (DateTime date in GetDatesOfWeek(dateOfTheWeek))
+            {
+                string dateString = date.ToString(TimeConsts.TimeFormat);
+
+                ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(dateString).ConfigureAwait(false);
+
+                if (tasksGroup == null)
+                {
+                    mLogger.LogError($"Could not find task group {dateString}. Report may be partial");
+                    continue;
+                }
+
+                weeklyGroups.Add(tasksGroup);
+            }
+
+            return mSummaryReporter.CreateWeeklySummaryReport(weeklyGroups);
+        }
     }
 }

@@ -1,9 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using TaskData.WorkTasks;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Services;
 using Xunit;
@@ -26,41 +23,69 @@ namespace TaskerAgantTests.Infra.Services
         }
 
         [Fact]
-        public async Task GetTodaysTasks_AsExpected()
+        public async Task SendTodaysTasksReport_AsExpected()
         {
             TaskerAgentService service = mServiceProvider.GetRequiredService<TaskerAgentService>();
 
-            IEnumerable<IWorkTask> todaysTasks = (await service.GetTodaysTasks().ConfigureAwait(false));
+            string todaysReport = await service.SendTodaysTasksReport().ConfigureAwait(false);
 
-            Assert.Contains(todaysTasks, task => task.Description.Equals("Drink Water", StringComparison.OrdinalIgnoreCase));
-            Assert.Contains(todaysTasks, task => task.Description.Equals("Exercise", StringComparison.OrdinalIgnoreCase));
-            Assert.Contains(todaysTasks, task => task.Description.Equals("Sleep hours", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains("Today's Tasks:", todaysReport, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Drink Water.", todaysReport, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Exercise.", todaysReport, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Sleep hours.", todaysReport, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
-        public async Task GetThisWeekTasks_AsExpected()
+        public async Task SendThisWeekTasksReport_AsExpected()
         {
             TaskerAgentService service = mServiceProvider.GetRequiredService<TaskerAgentService>();
 
-            IEnumerable<IWorkTask> thisWeekTasks = await service.GetThisWeekTasks().ConfigureAwait(false);
+            string thisWeekReport = await service.SendThisWeekTasksReport().ConfigureAwait(false);
 
-            IEnumerable<IWorkTask> drinkWaterTasks = thisWeekTasks.Where(task => task.Description.Equals("Drink Water", StringComparison.OrdinalIgnoreCase));
-            Assert.True(drinkWaterTasks.Count() == 7);
+            string[] splittedReport = thisWeekReport.Split("Drink Water");
+            Assert.True(splittedReport.Length == 8);
 
-            IEnumerable<IWorkTask> exerciseTasks = thisWeekTasks.Where(task => task.Description.Equals("Exercise", StringComparison.OrdinalIgnoreCase));
-            Assert.True(exerciseTasks.Count() == 7);
+            splittedReport = thisWeekReport.Split("Exercise");
+            Assert.True(splittedReport.Length == 8);
 
-            IEnumerable<IWorkTask> SleepTasks = thisWeekTasks.Where(task => task.Description.Equals("Sleep hours", StringComparison.OrdinalIgnoreCase));
-            Assert.True(SleepTasks.Count() == 7);
+            splittedReport = thisWeekReport.Split("Sleep hours");
+            Assert.True(splittedReport.Length == 8);
 
-            IEnumerable<IWorkTask> flossTasks = thisWeekTasks.Where(task => task.Description.Equals("Floss", StringComparison.OrdinalIgnoreCase));
-            Assert.True(flossTasks.Count() == 3);
+            splittedReport = thisWeekReport.Split("Floss");
+            Assert.True(splittedReport.Length == 4);
 
-            IEnumerable<IWorkTask> eatBambaTasks = thisWeekTasks.Where(task => task.Description.Equals("Eat bamba", StringComparison.OrdinalIgnoreCase));
-            Assert.True(eatBambaTasks.Count() == 1);
+            splittedReport = thisWeekReport.Split("Eat bamba");
+            Assert.True(splittedReport.Length == 2);
 
-            IEnumerable<IWorkTask> runTasks = thisWeekTasks.Where(task => task.Description.Equals("Run", StringComparison.OrdinalIgnoreCase));
-            Assert.True(runTasks.Count() == 2);
+            splittedReport = thisWeekReport.Split("Run");
+            Assert.True(splittedReport.Length == 3);
+        }
+
+        [Fact]
+        public async Task SendDailySummary_AsExpected()
+        {
+            TaskerAgentService service = mServiceProvider.GetRequiredService<TaskerAgentService>();
+
+            string report = await service.SendDailySummary(DateTime.Now).ConfigureAwait(false);
+
+            Assert.Contains("Daily Summary Report:", report);
+            Assert.Contains("Tasks Status - ", report);
+            Assert.Contains("Drink Water:", report);
+            Assert.Contains("Exercise:", report);
+            Assert.Contains("Sleep hours:", report);
+            Assert.Contains("Total score:", report);
+        }
+
+        [Fact]
+        public async Task SendWeeklySummary_AsExpected()
+        {
+            TaskerAgentService service = mServiceProvider.GetRequiredService<TaskerAgentService>();
+
+            string report = await service.SendWeeklySummary(DateTime.Now).ConfigureAwait(false);
+
+            string[] splittedReport = report.Split("Tasks Status");
+
+            Assert.True(splittedReport.Length == 8);
         }
     }
 }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using TaskerAgent.Domain;
 
-namespace TaskerAgent.Infra.TasksParser
+namespace TaskerAgent.Infra.Services.TasksParser
 {
     public class ParseComponents
     {

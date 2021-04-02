@@ -10,7 +10,7 @@ using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;
 using TaskerAgent.Infra.Options.Configurations;
 
-namespace TaskerAgent.Infra.TasksParser
+namespace TaskerAgent.Infra.Services.TasksParser
 {
     public class RepetitiveTasksParser
     {

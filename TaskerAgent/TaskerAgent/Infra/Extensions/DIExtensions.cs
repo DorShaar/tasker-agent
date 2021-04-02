@@ -8,12 +8,14 @@ using TaskData.TasksGroups;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
+using TaskerAgent.Infra.HostedServices;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Persistence.Context;
 using TaskerAgent.Infra.Persistence.Repositories;
-using TaskerAgent.Infra.RepetitiveTasksUpdaters;
 using TaskerAgent.Infra.Services;
-using TaskerAgent.Infra.TasksParser;
+using TaskerAgent.Infra.Services.RepetitiveTasksUpdaters;
+using TaskerAgent.Infra.Services.SummaryReporters;
+using TaskerAgent.Infra.Services.TasksParser;
 
 namespace TaskerAgent.Infra.Extensions
 {
@@ -29,7 +31,7 @@ namespace TaskerAgent.Infra.Extensions
 
             AddConfiguration(services);
 
-            //services.AddHostedService<TaskerAgentHostedService>(); // TODO
+            services.AddHostedService<TaskerAgentHostedService>();
         }
 
         private static void RegisterServices(IServiceCollection services)
@@ -37,6 +39,7 @@ namespace TaskerAgent.Infra.Extensions
             services.AddSingleton<TaskerAgentService>();
             services.AddSingleton<RepetitiveTasksUpdater>();
             services.AddSingleton<RepetitiveTasksParser>();
+            services.AddSingleton<SummaryReporter>();
         }
 
         private static void RegisterRepositories(IServiceCollection services)
