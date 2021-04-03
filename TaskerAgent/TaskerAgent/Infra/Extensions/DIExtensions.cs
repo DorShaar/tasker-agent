@@ -13,6 +13,7 @@ using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Persistence.Context;
 using TaskerAgent.Infra.Persistence.Repositories;
 using TaskerAgent.Infra.Services;
+using TaskerAgent.Infra.Services.Email;
 using TaskerAgent.Infra.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.Infra.Services.SummaryReporters;
 using TaskerAgent.Infra.Services.TasksParser;
@@ -40,6 +41,8 @@ namespace TaskerAgent.Infra.Extensions
             services.AddSingleton<RepetitiveTasksUpdater>();
             services.AddSingleton<RepetitiveTasksParser>();
             services.AddSingleton<SummaryReporter>();
+            services.AddSingleton<AgentTimingService>();
+            services.AddSingleton<EmailService>();
         }
 
         private static void RegisterRepositories(IServiceCollection services)

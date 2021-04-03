@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services;
+using TaskerAgent.Infra.Services.Email;
 using Timer = System.Timers.Timer;
 
 namespace TaskerAgent.Infra.HostedServices
@@ -69,6 +70,12 @@ namespace TaskerAgent.Infra.HostedServices
                 await mTaskerAgentService.SendWeeklySummary(elapsedEventArgs.SignalTime).ConfigureAwait(false);
                 await mTaskerAgentService.SendThisWeekTasksReport().ConfigureAwait(false);
                 mAgentTimingService.SignalWeeklySummaryPerformed();
+            }
+
+            if (mAgentTimingService.ShouldFulfillYesterdayReport(elapsedEventArgs.SignalTime))
+            {
+                // TODO
+                //await mTaskerAgentService.FulfillYesterdayReport().ConfigureAwait(false);
             }
         }
 

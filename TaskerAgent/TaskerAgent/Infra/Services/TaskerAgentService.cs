@@ -6,6 +6,7 @@ using TaskData.OperationResults;
 using TaskData.TasksGroups;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.Infra.Extensions;
+using TaskerAgent.Infra.Services.Email;
 using TaskerAgent.Infra.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.Infra.Services.SummaryReporters;
 using TaskerAgent.Infra.Services.TasksParser;
@@ -22,6 +23,7 @@ namespace TaskerAgent.Infra.Services
         private readonly RepetitiveTasksUpdater mRepetitiveTasksUpdater;
         private readonly RepetitiveTasksParser mRepetitiveTasksParser;
         private readonly SummaryReporter mSummaryReporter;
+        private readonly EmailService mEmailService;
         private readonly ILogger<TaskerAgentService> mLogger;
 
         // TODO calendar tasks + reminders.
@@ -30,6 +32,7 @@ namespace TaskerAgent.Infra.Services
             RepetitiveTasksUpdater repetitiveTasksUpdater,
             RepetitiveTasksParser repetitiveTasksParser,
             SummaryReporter summaryReporter,
+            EmailService emailService,
             ILogger<TaskerAgentService> logger)
         {
             mTasksGroupRepository = TaskGroupRepository ?? throw new ArgumentNullException(nameof(TaskGroupRepository));
@@ -37,6 +40,7 @@ namespace TaskerAgent.Infra.Services
             mRepetitiveTasksUpdater = repetitiveTasksUpdater ?? throw new ArgumentNullException(nameof(repetitiveTasksUpdater));
             mRepetitiveTasksParser = repetitiveTasksParser ?? throw new ArgumentNullException(nameof(repetitiveTasksParser));
             mSummaryReporter = summaryReporter ?? throw new ArgumentNullException(nameof(summaryReporter));
+            mEmailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -50,7 +54,11 @@ namespace TaskerAgent.Infra.Services
                 return string.Empty;
             }
 
-            return mSummaryReporter.CreateTodaysFutureTasksReport(tasksGroup);
+            string todaysFutureTasksReport = mSummaryReporter.CreateTodaysFutureTasksReport(tasksGroup);
+
+            await mEmailService.SendMessage("Today's tasks", todaysFutureTasksReport).ConfigureAwait(false);
+
+            return todaysFutureTasksReport;
         }
 
         public async Task<string> SendThisWeekTasksReport()
@@ -63,7 +71,11 @@ namespace TaskerAgent.Infra.Services
                 return string.Empty;
             }
 
-            return mSummaryReporter.CreateThisWeekFutureTasksReport(thisWeekGroup);
+            string thisWeekFutureTasksReport = mSummaryReporter.CreateThisWeekFutureTasksReport(thisWeekGroup);
+
+            await mEmailService.SendMessage("Today's tasks", thisWeekFutureTasksReport).ConfigureAwait(false);
+
+            return thisWeekFutureTasksReport;
         }
 
         private async Task<IEnumerable<ITasksGroup>> GetThisWeekGroups()
@@ -183,6 +195,22 @@ namespace TaskerAgent.Infra.Services
             }
 
             return mSummaryReporter.CreateWeeklySummaryReport(weeklyGroups);
+        }
+
+        public async Task FulfillReport(DateTime dateTime)
+        {
+            // TODO
+            //string dateString = dateTime.ToString(TimeConsts.TimeFormat);
+
+            //ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(dateString).ConfigureAwait(false);
+
+            //if (tasksGroup == null)
+            //{
+            //    mLogger.LogError($"Could not find task group {dateString}. Could not fulfill data");
+            //    return;
+            //}
+
+            //foreach(IWorkTask task in tasksGroup.GetAllTasks())
         }
     }
 }

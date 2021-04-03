@@ -10,6 +10,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="EASendMail" Version="7.7.0.8" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.51.0" />
+    <PackageReference Include="Google.Apis.Gmail.v1" Version="1.51.0.2251" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
