@@ -20,7 +20,9 @@ namespace TaskerAgent.Infra.Services.Email
     {
         private const string ApplicationName = "TaskerAgent";
         private const string StmpGmailAddress = "smtp.gmail.com";
+        private const string UserId = "me";
         private const string TaskerAgentLable = "Label_2783741690411084443";
+        private const string UnreadMessageLable = "UNREAD";
 
         private readonly string[] mScopes = new[] { "https://mail.google.com/", };
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
@@ -51,6 +53,8 @@ namespace TaskerAgent.Infra.Services.Email
 
             mSmtpClient = new SmtpClient();
             mIsConnected = true;
+
+            mLogger.LogInformation($"Connected to smtp server {StmpGmailAddress}");
         }
 
         public Task SendMessage(string subject, string message)
@@ -70,7 +74,7 @@ namespace TaskerAgent.Infra.Services.Email
 
                 mSmtpClient.SendMail(mSmtpServer, mail);
 
-                mLogger.LogDebug($"Email {subject} has been submitted to server successfully!");
+                mLogger.LogInformation($"Email {subject} has been submitted to server successfully!");
             }
             catch (Exception ex)
             {
@@ -80,9 +84,9 @@ namespace TaskerAgent.Infra.Services.Email
             return Task.CompletedTask;
         }
 
-        public async Task<IEnumerable<string>> ReadMessages()
+        public async Task<IEnumerable<MessageInfo>> ReadMessages()
         {
-            List<string> messages = new List<string>();
+            List<MessageInfo> messages = new List<MessageInfo>();
 
             var service = new GmailService(new BaseClientService.Initializer()
             {
@@ -90,20 +94,23 @@ namespace TaskerAgent.Infra.Services.Email
                 ApplicationName = ApplicationName,
             });
 
-            var messagesListRequest = service.Users.Messages.List("me");
-            messagesListRequest.LabelIds = new List<string>() { TaskerAgentLable, "UNREAD" };
+            var messagesListRequest = service.Users.Messages.List(UserId);
+            messagesListRequest.LabelIds = new List<string>() { TaskerAgentLable, UnreadMessageLable };
 
             ListMessagesResponse listMessagesResponse = await messagesListRequest.ExecuteAsync().ConfigureAwait(false);
 
+            if (listMessagesResponse.Messages == null)
+                return messages;
+
             foreach (Message message in listMessagesResponse.Messages)
             {
-                var messageGetRequest = service.Users.Messages.Get("me", message.Id);
+                var messageGetRequest = service.Users.Messages.Get(UserId, message.Id);
                 var messageResponse = await messageGetRequest.ExecuteAsync().ConfigureAwait(false);
 
                 if (messageResponse.Payload.Body.Data != null)
-                    messages.Add(ConvertFromBase64(messageResponse.Payload.Body.Data));
+                    messages.Add(new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Body.Data)));
                 else
-                    messages.Add(ConvertFromBase64(messageResponse.Payload.Parts[0].Body.Data));
+                    messages.Add(new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Parts[0].Body.Data)));
             }
 
             return messages;
@@ -129,6 +136,28 @@ namespace TaskerAgent.Infra.Services.Email
         {
             byte[] base64EncodedBytes = Convert.FromBase64String(base64Text);
             return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+        }
+
+        public async Task MarkMessageAsRead(string messageId)
+        {
+            var service = new GmailService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = await GetUserCredential().ConfigureAwait(false),
+                ApplicationName = ApplicationName,
+            });
+
+            ModifyMessageRequest modifyMessageRequest = new ModifyMessageRequest()
+            {
+                RemoveLabelIds = new List<string> { UnreadMessageLable }
+            };
+
+            var messageModifyRequest = service.Users.Messages.Modify(modifyMessageRequest, UserId, messageId);
+            var messageResponse = await messageModifyRequest.ExecuteAsync().ConfigureAwait(false);
+
+            if (messageResponse.LabelIds.Contains(UnreadMessageLable))
+                mLogger.LogWarning($"Failed to remove label {UnreadMessageLable} from message id {messageId}");
+            else
+                mLogger.LogInformation($"Marked message id {messageId} as unread");
         }
     }
 }

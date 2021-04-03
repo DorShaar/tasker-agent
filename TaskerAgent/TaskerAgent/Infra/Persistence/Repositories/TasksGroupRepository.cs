@@ -56,18 +56,6 @@ namespace TaskerAgent.Infra.Persistence.Repositories
         {
             mLogger.LogError("Not impemented yet");
             return Task.CompletedTask;
-
-            // TODO
-            //if (await mDatabase.FindAsync(group.Name).ConfigureAwait(false) == null)
-            //{
-            //    mLogger.LogError($"Group ID: {group.ID} Group name: {group.Name} - No such entity was found in database");
-            //    return;
-            //}
-
-            //foreach (IWorkTask task in group.GetAllTasks())
-            //{
-            //    mLogger.LogDebug($"Removing inner task id {task.ID} description {task.Description}");
-            //}
         }
     }
 }

@@ -55,6 +55,7 @@ namespace TaskerAgent.Infra.HostedServices
             if (!mAgentTimingService.ShouldUpdate())
             {
                 await mTaskerAgentService.UpdateRepetitiveTasks().ConfigureAwait(false);
+                mAgentTimingService.SignalUpdatePerformed();
             }
             else
             {

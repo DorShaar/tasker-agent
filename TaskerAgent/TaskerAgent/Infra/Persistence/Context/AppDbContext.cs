@@ -80,7 +80,7 @@ namespace TaskerAgent.Infra.Persistence.Context
 
             if (!File.Exists(databasePath))
             {
-                mLogger.LogError($"Could not find database file {databasePath}");
+                mLogger.LogInformation($"Could not find database file {databasePath}");
                 return null;
             }
 

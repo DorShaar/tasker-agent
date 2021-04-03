@@ -14,6 +14,7 @@ using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksClusters;
 using TaskerAgent.Infra.Options.Configurations;
+using TaskerAgent.Infra.Services.Email;
 using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
@@ -198,42 +199,49 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             return null;
         }
 
-        public async Task UpdateGroupByMessage(string message)
+        public async Task UpdateGroupByMessage(MessageInfo message)
         {
-            string[] stringTasks = message.Split(EmailMessageNewLine);
-            string date = stringTasks[1].Split("- ")[1].Replace(":", string.Empty);
-            ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(date).ConfigureAwait(false);
-
-            if (tasksGroup == null)
+            try
             {
-                mLogger.LogError("Failed to update according to given message");
-                return;
-            }
+                string[] stringTasks = message.Body.Split(EmailMessageNewLine);
+                string date = stringTasks[1].Split("- ")[1].Replace(":", string.Empty);
+                ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(date).ConfigureAwait(false);
 
-            IEnumerable<IWorkTask> tasks = tasksGroup.GetAllTasks();
-            foreach (string messagePart in stringTasks.Skip(2))
-            {
-                if (string.IsNullOrWhiteSpace(messagePart))
-                    continue;
-
-                string[] subMessageParts = messagePart.Split(".");
-                string description = subMessageParts[0];
-                IWorkTask task = tasks.FirstOrDefault(task => task.Description.Equals(description, StringComparison.OrdinalIgnoreCase));
-
-                if (task == null || !(task is GeneralRepetitiveMeasureableTask repetitiveMeasureableTask))
+                if (tasksGroup == null)
                 {
-                    mLogger.LogWarning($"Could not find task {description}");
-                    continue;
+                    mLogger.LogError("Failed to update according to given message");
+                    return;
                 }
 
-                string actualString = subMessageParts[2]
-                    .Replace(".", string.Empty)
-                    .Replace("actual:", string.Empty, StringComparison.OrdinalIgnoreCase)
-                    .Trim();
-                repetitiveMeasureableTask.Actual = Convert.ToInt32(actualString);
-            }
+                IEnumerable<IWorkTask> tasks = tasksGroup.GetAllTasks();
+                foreach (string messagePart in stringTasks.Skip(2))
+                {
+                    if (string.IsNullOrWhiteSpace(messagePart))
+                        continue;
 
-            await mTasksGroupRepository.AddOrUpdateAsync(tasksGroup).ConfigureAwait(false);
+                    string[] subMessageParts = messagePart.Split(".");
+                    string description = subMessageParts[0];
+                    IWorkTask task = tasks.FirstOrDefault(task => task.Description.Equals(description, StringComparison.OrdinalIgnoreCase));
+
+                    if (task == null || !(task is GeneralRepetitiveMeasureableTask repetitiveMeasureableTask))
+                    {
+                        mLogger.LogWarning($"Could not find task {description}");
+                        continue;
+                    }
+
+                    string actualString = subMessageParts[2]
+                        .Replace(".", string.Empty)
+                        .Replace("actual:", string.Empty, StringComparison.OrdinalIgnoreCase)
+                        .Trim();
+                    repetitiveMeasureableTask.Actual = Convert.ToInt32(actualString);
+                }
+
+                await mTasksGroupRepository.AddOrUpdateAsync(tasksGroup).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                mLogger.LogError(ex, $"Could not update tasks by message id {message.Id}");
+            }
         }
     }
 }

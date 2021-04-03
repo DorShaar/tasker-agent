@@ -7,6 +7,7 @@ namespace TaskerAgent.Infra.HostedServices
         private const int DailySummaryTime = 7;
         private const DayOfWeek WeeklySummaryTime = DayOfWeek.Sunday;
 
+        private bool mWasResetOnMidnightAlreadyPerformed;
         private bool mWasUpdateAlreadyPerformed;
         private bool mWasDailySummarySent;
         private bool mWasWeeklySummarySent;
@@ -15,10 +16,19 @@ namespace TaskerAgent.Infra.HostedServices
         {
             if (dateTime.Hour == 0)
             {
-                mWasUpdateAlreadyPerformed = false;
-                mWasDailySummarySent = false;
-                mWasWeeklySummarySent = false;
+                if (!mWasResetOnMidnightAlreadyPerformed)
+                {
+                    mWasUpdateAlreadyPerformed = false;
+                    mWasDailySummarySent = false;
+                    mWasWeeklySummarySent = false;
+
+                    mWasResetOnMidnightAlreadyPerformed = true;
+                }
+
+                return;
             }
+
+            mWasResetOnMidnightAlreadyPerformed = false;
         }
 
         public bool ShouldUpdate()

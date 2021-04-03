@@ -143,7 +143,7 @@ Eat bamba. Expected: 2.Actual: 6
 ";
 
             IEmailService emailService = A.Fake<IEmailService>();
-            A.CallTo(() => emailService.ReadMessages()).Returns(new string[] { message });
+            A.CallTo(() => emailService.ReadMessages()).Returns(new MessageInfo[] { new MessageInfo("id", message) });
             mServiceCollection.AddSingleton(emailService);
 
             ServiceProvider serviceProvider = mServiceCollection.BuildServiceProvider();
@@ -152,15 +152,13 @@ Eat bamba. Expected: 2.Actual: 6
             IDbRepository<ITasksGroup> realTasksGroupRepository = serviceProvider.GetRequiredService<IDbRepository<ITasksGroup>>();
 
             ITasksGroup returnedTasksGroup = null;
-            //A.CallTo(() => fakeTasksGroupRepository.AddOrUpdateAsync(A<ITasksGroup>.Ignored))
-            //    .Invokes(fakeObjectCall => returnedTasksGroup = fakeObjectCall.Arguments.Get<ITasksGroup>(0));
 
             await service.CheckForUpdates().ConfigureAwait(false);
 
             IDbRepository<ITasksGroup> fakeTasksGroupRepository = A.Fake<IDbRepository<ITasksGroup>>(x => x.Wrapping(realTasksGroupRepository));
 
-            A.CallTo(() => fakeTasksGroupRepository.AddOrUpdateAsync(A<ITasksGroup>.That.Matches(group => group.Name == "03/04/2021"))).MustHaveHappenedOnceExactly();
-
+            A.CallTo(() => fakeTasksGroupRepository.AddOrUpdateAsync(A<ITasksGroup>.That.Matches(group => group.Name == "03/04/2021")))
+                .MustHaveHappenedOnceExactly();
 
             List<IWorkTask> tasks = returnedTasksGroup.GetAllTasks().ToList();
 

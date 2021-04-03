@@ -9,7 +9,7 @@ namespace TaskerAgent
     {
         private static async Task Main()
         {
-            Console.WriteLine("Hello World!");
+            Console.WriteLine("Hello Tasker Agent!");
 
             IHostBuilder builder = new HostBuilder().ConfigureServices((_, services) => services.UseDI());
 

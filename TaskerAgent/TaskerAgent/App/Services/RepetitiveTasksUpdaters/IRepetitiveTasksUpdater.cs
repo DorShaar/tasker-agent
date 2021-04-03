@@ -1,11 +1,12 @@
 ﻿using System.Threading.Tasks;
 using TaskData.TasksGroups;
+using TaskerAgent.Infra.Services.Email;
 
 namespace TaskerAgent.App.Services.RepetitiveTasksUpdaters
 {
     public interface IRepetitiveTasksUpdater
     {
-        Task UpdateGroupByMessage(string message);
+        Task UpdateGroupByMessage(MessageInfo message);
         Task Update(ITasksGroup tasksGroup);
     }
 }

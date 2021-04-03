@@ -9,6 +9,7 @@ using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.Services.Email;
 using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.Infra.Extensions;
+using TaskerAgent.Infra.Services.Email;
 using TaskerAgent.Infra.Services.SummaryReporters;
 using TaskerAgent.Infra.Services.TasksParser;
 using Triangle.Time;
@@ -43,6 +44,8 @@ namespace TaskerAgent.Infra.Services
             mRepetitiveTasksParser = repetitiveTasksParser ?? throw new ArgumentNullException(nameof(repetitiveTasksParser));
             mSummaryReporter = summaryReporter ?? throw new ArgumentNullException(nameof(summaryReporter));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            mEmailService.Connect();
         }
 
         public async Task SendTodaysTasksReport()
@@ -152,7 +155,7 @@ namespace TaskerAgent.Infra.Services
         /// <param name="date"></param>
         public async Task SendDailySummary(DateTime date)
         {
-            mLogger.LogDebug("Sending daily summary");
+            mLogger.LogInformation("Sending daily summary");
 
             string dateString = date.ToString(TimeConsts.TimeFormat);
 
@@ -170,7 +173,7 @@ namespace TaskerAgent.Infra.Services
         /// </summary>
         public async Task SendWeeklySummary(DateTime dateOfTheWeek)
         {
-            mLogger.LogDebug("Sending weekly summary");
+            mLogger.LogInformation("Sending weekly summary");
 
             List<ITasksGroup> weeklyGroups = new List<ITasksGroup>(7);
 
@@ -195,9 +198,9 @@ namespace TaskerAgent.Infra.Services
 
         public async Task CheckForUpdates()
         {
-            mLogger.LogDebug("Checking for updates");
+            mLogger.LogInformation("Checking for updates");
 
-            IEnumerable<string> messages = await mEmailService.ReadMessages().ConfigureAwait(false);
+            IEnumerable<MessageInfo> messages = await mEmailService.ReadMessages().ConfigureAwait(false);
 
             if (messages?.Any() != true)
             {
@@ -205,9 +208,10 @@ namespace TaskerAgent.Infra.Services
                 return;
             }
 
-            foreach(string message in messages)
+            foreach(MessageInfo message in messages)
             {
                 await mRepetitiveTasksUpdater.UpdateGroupByMessage(message).ConfigureAwait(false);
+                await mEmailService.MarkMessageAsRead(message.Id).ConfigureAwait(false);
             }
         }
     }
