@@ -1,13 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using TaskData.OperationResults;
 using TaskData.TasksGroups;
 using TaskerAgent.App.Persistence.Repositories;
+using TaskerAgent.App.Services.Email;
+using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.Infra.Extensions;
-using TaskerAgent.Infra.Services.Email;
-using TaskerAgent.Infra.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.Infra.Services.SummaryReporters;
 using TaskerAgent.Infra.Services.TasksParser;
 using Triangle.Time;
@@ -20,62 +21,52 @@ namespace TaskerAgent.Infra.Services
 
         private readonly IDbRepository<ITasksGroup> mTasksGroupRepository;
         private readonly ITasksGroupFactory mTaskGroupFactory;
-        private readonly RepetitiveTasksUpdater mRepetitiveTasksUpdater;
+        private readonly IRepetitiveTasksUpdater mRepetitiveTasksUpdater;
+        private readonly IEmailService mEmailService;
         private readonly RepetitiveTasksParser mRepetitiveTasksParser;
         private readonly SummaryReporter mSummaryReporter;
-        private readonly EmailService mEmailService;
         private readonly ILogger<TaskerAgentService> mLogger;
 
         // TODO calendar tasks + reminders.
         public TaskerAgentService(IDbRepository<ITasksGroup> TaskGroupRepository,
             ITasksGroupFactory tasksGroupFactory,
-            RepetitiveTasksUpdater repetitiveTasksUpdater,
+            IRepetitiveTasksUpdater repetitiveTasksUpdater,
+            IEmailService emailService,
             RepetitiveTasksParser repetitiveTasksParser,
             SummaryReporter summaryReporter,
-            EmailService emailService,
             ILogger<TaskerAgentService> logger)
         {
             mTasksGroupRepository = TaskGroupRepository ?? throw new ArgumentNullException(nameof(TaskGroupRepository));
             mTaskGroupFactory = tasksGroupFactory ?? throw new ArgumentNullException(nameof(tasksGroupFactory));
             mRepetitiveTasksUpdater = repetitiveTasksUpdater ?? throw new ArgumentNullException(nameof(repetitiveTasksUpdater));
+            mEmailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             mRepetitiveTasksParser = repetitiveTasksParser ?? throw new ArgumentNullException(nameof(repetitiveTasksParser));
             mSummaryReporter = summaryReporter ?? throw new ArgumentNullException(nameof(summaryReporter));
-            mEmailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<string> SendTodaysTasksReport()
+        public async Task SendTodaysTasksReport()
         {
             ITasksGroup tasksGroup = await GetTasksByDate(DateTime.Now).ConfigureAwait(false);
 
             if (tasksGroup == null)
-            {
                 mLogger.LogError("Could not create report for today");
-                return string.Empty;
-            }
 
             string todaysFutureTasksReport = mSummaryReporter.CreateTodaysFutureTasksReport(tasksGroup);
 
             await mEmailService.SendMessage("Today's tasks", todaysFutureTasksReport).ConfigureAwait(false);
-
-            return todaysFutureTasksReport;
         }
 
-        public async Task<string> SendThisWeekTasksReport()
+        public async Task SendThisWeekTasksReport()
         {
             IEnumerable<ITasksGroup> thisWeekGroup = await GetThisWeekGroups().ConfigureAwait(false);
 
             if (thisWeekGroup == null)
-            {
                 mLogger.LogError("Could not create report for this week");
-                return string.Empty;
-            }
 
             string thisWeekFutureTasksReport = mSummaryReporter.CreateThisWeekFutureTasksReport(thisWeekGroup);
 
             await mEmailService.SendMessage("Today's tasks", thisWeekFutureTasksReport).ConfigureAwait(false);
-
-            return thisWeekFutureTasksReport;
         }
 
         private async Task<IEnumerable<ITasksGroup>> GetThisWeekGroups()
@@ -128,6 +119,8 @@ namespace TaskerAgent.Infra.Services
 
         public async Task UpdateRepetitiveTasks()
         {
+            mLogger.LogDebug("Updating repetitive tasks");
+
             ITasksGroup tasksFromConfigGroup = ReadRepetitiveTasksFromInputFile();
 
             if (tasksFromConfigGroup == null)
@@ -157,26 +150,28 @@ namespace TaskerAgent.Infra.Services
         /// Reports tasks progress for the day of the given date.
         /// </summary>
         /// <param name="date"></param>
-        public async Task<string> SendDailySummary(DateTime date)
+        public async Task SendDailySummary(DateTime date)
         {
+            mLogger.LogDebug("Sending daily summary");
+
             string dateString = date.ToString(TimeConsts.TimeFormat);
 
             ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(dateString).ConfigureAwait(false);
 
             if (tasksGroup == null)
-            {
                 mLogger.LogError($"Could not find task group {dateString}. Could not generate report");
-                return string.Empty;
-            }
 
-            return mSummaryReporter.CreateDailySummaryReport(tasksGroup);
+            string dailySummaryReport = mSummaryReporter.CreateDailySummaryReport(tasksGroup);
+            await mEmailService.SendMessage("Daily Summary Report", dailySummaryReport).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Reports tasks progress for the week of the given date.
         /// </summary>
-        public async Task<string> SendWeeklySummary(DateTime dateOfTheWeek)
+        public async Task SendWeeklySummary(DateTime dateOfTheWeek)
         {
+            mLogger.LogDebug("Sending weekly summary");
+
             List<ITasksGroup> weeklyGroups = new List<ITasksGroup>(7);
 
             foreach (DateTime date in GetDatesOfWeek(dateOfTheWeek))
@@ -194,23 +189,26 @@ namespace TaskerAgent.Infra.Services
                 weeklyGroups.Add(tasksGroup);
             }
 
-            return mSummaryReporter.CreateWeeklySummaryReport(weeklyGroups);
+            string weeklySummaryReport =  mSummaryReporter.CreateWeeklySummaryReport(weeklyGroups);
+            await mEmailService.SendMessage("Weekly Summary Report", weeklySummaryReport).ConfigureAwait(false);
         }
 
-        public async Task FulfillReport(DateTime dateTime)
+        public async Task CheckForUpdates()
         {
-            // TODO
-            //string dateString = dateTime.ToString(TimeConsts.TimeFormat);
+            mLogger.LogDebug("Checking for updates");
 
-            //ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(dateString).ConfigureAwait(false);
+            IEnumerable<string> messages = await mEmailService.ReadMessages().ConfigureAwait(false);
 
-            //if (tasksGroup == null)
-            //{
-            //    mLogger.LogError($"Could not find task group {dateString}. Could not fulfill data");
-            //    return;
-            //}
+            if (messages?.Any() != true)
+            {
+                mLogger.LogDebug("No new messages found. Nothing to updated");
+                return;
+            }
 
-            //foreach(IWorkTask task in tasksGroup.GetAllTasks())
+            foreach(string message in messages)
+            {
+                await mRepetitiveTasksUpdater.UpdateGroupByMessage(message).ConfigureAwait(false);
+            }
         }
     }
 }

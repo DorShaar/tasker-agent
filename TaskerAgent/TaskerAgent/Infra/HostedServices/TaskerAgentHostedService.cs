@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using System.Timers;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services;
-using TaskerAgent.Infra.Services.Email;
 using Timer = System.Timers.Timer;
 
 namespace TaskerAgent.Infra.HostedServices
@@ -57,12 +56,20 @@ namespace TaskerAgent.Infra.HostedServices
             {
                 await mTaskerAgentService.UpdateRepetitiveTasks().ConfigureAwait(false);
             }
+            else
+            {
+                mLogger.LogDebug("Should not updated repetitive tasks yet");
+            }
 
             if (mAgentTimingService.ShouldSendDailySummary(elapsedEventArgs.SignalTime))
             {
                 await mTaskerAgentService.SendDailySummary(elapsedEventArgs.SignalTime).ConfigureAwait(false);
                 await mTaskerAgentService.SendTodaysTasksReport().ConfigureAwait(false);
                 mAgentTimingService.SignalDailySummaryPerformed();
+            }
+            else
+            {
+                mLogger.LogDebug("Should not send daily summary yet");
             }
 
             if (mAgentTimingService.ShouldSendWeeklySummary(elapsedEventArgs.SignalTime))
@@ -71,12 +78,12 @@ namespace TaskerAgent.Infra.HostedServices
                 await mTaskerAgentService.SendThisWeekTasksReport().ConfigureAwait(false);
                 mAgentTimingService.SignalWeeklySummaryPerformed();
             }
-
-            if (mAgentTimingService.ShouldFulfillYesterdayReport(elapsedEventArgs.SignalTime))
+            else
             {
-                // TODO
-                //await mTaskerAgentService.FulfillYesterdayReport().ConfigureAwait(false);
+                mLogger.LogDebug("Should not send weekly summary yet");
             }
+
+            await mTaskerAgentService.CheckForUpdates().ConfigureAwait(false);
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

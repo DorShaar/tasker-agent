@@ -11,11 +11,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using TaskerAgent.App.Services.Email;
 using TaskerAgent.Infra.Options.Configurations;
 
 namespace TaskerAgent.Infra.Services.Email
 {
-    public class EmailService
+    public class EmailService : IEmailService
     {
         private const string ApplicationName = "TaskerAgent";
         private const string StmpGmailAddress = "smtp.gmail.com";
@@ -25,16 +26,20 @@ namespace TaskerAgent.Infra.Services.Email
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
         private readonly ILogger<EmailService> mLogger;
 
-        private readonly SmtpServer mSmtpServer;
-        private readonly SmtpClient mSmtpClient;
+        private SmtpServer mSmtpServer;
+        private SmtpClient mSmtpClient;
+        private bool mIsConnected;
 
         public EmailService(IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
                 ILogger<EmailService> logger)
         {
             mTaskerAgentOptions = taskerAgentOptions ?? throw new ArgumentNullException(nameof(taskerAgentOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
 
-            string accessToken = File.ReadAllText(mTaskerAgentOptions.CurrentValue.AccessTokenPath);
+        public async Task Connect()
+        {
+            string accessToken = await File.ReadAllTextAsync(mTaskerAgentOptions.CurrentValue.AccessTokenPath).ConfigureAwait(false);
             mSmtpServer = new SmtpServer(StmpGmailAddress)
             {
                 ConnectType = SmtpConnectType.ConnectSSLAuto,
@@ -45,10 +50,14 @@ namespace TaskerAgent.Infra.Services.Email
             };
 
             mSmtpClient = new SmtpClient();
+            mIsConnected = true;
         }
 
         public Task SendMessage(string subject, string message)
         {
+            if (!mIsConnected)
+                throw new InvalidOperationException("Could not send message. Please connect first");
+
             try
             {
                 SmtpMail mail = new SmtpMail("TryIt")
@@ -91,7 +100,10 @@ namespace TaskerAgent.Infra.Services.Email
                 var messageGetRequest = service.Users.Messages.Get("me", message.Id);
                 var messageResponse = await messageGetRequest.ExecuteAsync().ConfigureAwait(false);
 
-                messages.Add(ConvertFromBase64(messageResponse.Payload.Body.Data));
+                if (messageResponse.Payload.Body.Data != null)
+                    messages.Add(ConvertFromBase64(messageResponse.Payload.Body.Data));
+                else
+                    messages.Add(ConvertFromBase64(messageResponse.Payload.Parts[0].Body.Data));
             }
 
             return messages;

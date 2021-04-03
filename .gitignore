@@ -355,3 +355,6 @@ nuget.config
 #database files
 repetitive_tasks.txt
 *.db
+
+#tokens files
+tokens/

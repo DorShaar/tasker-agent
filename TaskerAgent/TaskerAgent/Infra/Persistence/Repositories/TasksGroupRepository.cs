@@ -46,6 +46,8 @@ namespace TaskerAgent.Infra.Persistence.Repositories
 
         public async Task<bool> AddOrUpdateAsync(ITasksGroup newGroup)
         {
+            mLogger.LogDebug($"Updating {newGroup.Name}");
+
             await mDatabase.SaveCurrentDatabase(newGroup).ConfigureAwait(false);
             return true;
         }

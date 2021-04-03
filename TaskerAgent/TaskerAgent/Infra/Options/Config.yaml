@@ -1,2 +1,7 @@
 DatabaseDirectoryPath: /mnt/database
 InputFilePath: "repetitive_tasks.txt"
+NotifierInterval: "1:00:00"
+DaysToKeepForward: 40
+EmailToNotify: "dordatas@gmail.com"
+AccessTokenPath: "C:/Dor/Projects/tasker-agent/TaskerAgent/tokens/accessToken.txt"
+CredentialsPath: "C:/Dor/Projects/tasker-agent/TaskerAgent/tokens/client_secret.json"

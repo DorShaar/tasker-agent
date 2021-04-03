@@ -6,6 +6,8 @@ using System.IO;
 using TaskData;
 using TaskData.TasksGroups;
 using TaskerAgent.App.Persistence.Repositories;
+using TaskerAgent.App.Services.Email;
+using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
 using TaskerAgent.Infra.HostedServices;
@@ -38,11 +40,11 @@ namespace TaskerAgent.Infra.Extensions
         private static void RegisterServices(IServiceCollection services)
         {
             services.AddSingleton<TaskerAgentService>();
-            services.AddSingleton<RepetitiveTasksUpdater>();
+            services.AddSingleton<IRepetitiveTasksUpdater, RepetitiveTasksUpdater>();
             services.AddSingleton<RepetitiveTasksParser>();
             services.AddSingleton<SummaryReporter>();
             services.AddSingleton<AgentTimingService>();
-            services.AddSingleton<EmailService>();
+            services.AddSingleton<IEmailService, EmailService>();
         }
 
         private static void RegisterRepositories(IServiceCollection services)
@@ -73,7 +75,7 @@ namespace TaskerAgent.Infra.Extensions
             IConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
 
             const string configFileName = "Config.yaml";
-            configurationBuilder.AddYamlFile(Path.Combine("Infra", "Options", "Configurations", configFileName), optional: false);
+            configurationBuilder.AddYamlFile(Path.Combine("Infra", "Options", configFileName), optional: false);
 
             IConfiguration configuration = configurationBuilder.Build();
 

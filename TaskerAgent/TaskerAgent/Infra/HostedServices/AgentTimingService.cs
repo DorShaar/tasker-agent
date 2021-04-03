@@ -10,7 +10,6 @@ namespace TaskerAgent.Infra.HostedServices
         private bool mWasUpdateAlreadyPerformed;
         private bool mWasDailySummarySent;
         private bool mWasWeeklySummarySent;
-        private bool mWasFulfilledYesterdaysReport;
 
         public void ResetOnMidnight(DateTime dateTime)
         {
@@ -19,7 +18,6 @@ namespace TaskerAgent.Infra.HostedServices
                 mWasUpdateAlreadyPerformed = false;
                 mWasDailySummarySent = false;
                 mWasWeeklySummarySent = false;
-                mWasFulfilledYesterdaysReport = false;
             }
         }
 
@@ -51,11 +49,6 @@ namespace TaskerAgent.Infra.HostedServices
         public void SignalWeeklySummaryPerformed()
         {
             mWasWeeklySummarySent = true;
-        }
-
-        public bool ShouldFulfillYesterdayReport(DateTime dateTime)
-        {
-            return !mWasFulfilledYesterdaysReport && dateTime.Hour == DailySummaryTime;
         }
     }
 }
