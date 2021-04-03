@@ -157,7 +157,7 @@ namespace TaskerAgent.Infra.Services.Email
             if (messageResponse.LabelIds.Contains(UnreadMessageLable))
                 mLogger.LogWarning($"Failed to remove label {UnreadMessageLable} from message id {messageId}");
             else
-                mLogger.LogInformation($"Marked message id {messageId} as unread");
+                mLogger.LogInformation($"Marked message id {messageId} as read");
         }
     }
 }

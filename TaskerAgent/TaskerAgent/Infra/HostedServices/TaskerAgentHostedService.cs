@@ -59,7 +59,7 @@ namespace TaskerAgent.Infra.HostedServices
             }
             else
             {
-                mLogger.LogDebug("Should not updated repetitive tasks yet");
+                mLogger.LogDebug($"Should not updated repetitive tasks yet {elapsedEventArgs.SignalTime.TimeOfDay}");
             }
 
             if (mAgentTimingService.ShouldSendDailySummary(elapsedEventArgs.SignalTime))
@@ -70,7 +70,7 @@ namespace TaskerAgent.Infra.HostedServices
             }
             else
             {
-                mLogger.LogDebug("Should not send daily summary yet");
+                mLogger.LogDebug($"Should not send daily summary yet {elapsedEventArgs.SignalTime.TimeOfDay}");
             }
 
             if (mAgentTimingService.ShouldSendWeeklySummary(elapsedEventArgs.SignalTime))
@@ -81,7 +81,7 @@ namespace TaskerAgent.Infra.HostedServices
             }
             else
             {
-                mLogger.LogDebug("Should not send weekly summary yet");
+                mLogger.LogDebug($"Should not send weekly summary yet {elapsedEventArgs.SignalTime.TimeOfDay}");
             }
 
             await mTaskerAgentService.CheckForUpdates().ConfigureAwait(false);
