@@ -196,7 +196,7 @@ namespace TaskerAgent.Infra.Services
             await mEmailService.SendMessage("Weekly Summary Report", weeklySummaryReport).ConfigureAwait(false);
         }
 
-        public async Task CheckForUpdates()
+        public async Task<IEnumerable<DateTime>> CheckForUpdates()
         {
             mLogger.LogInformation("Checking for updates");
 
@@ -205,7 +205,7 @@ namespace TaskerAgent.Infra.Services
             if (messages?.Any() != true)
             {
                 mLogger.LogDebug("No new messages found. Nothing to updated");
-                return;
+                return new DateTime[0];
             }
 
             foreach(MessageInfo message in messages)

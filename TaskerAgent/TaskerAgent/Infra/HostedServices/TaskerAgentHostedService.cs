@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -84,7 +85,8 @@ namespace TaskerAgent.Infra.HostedServices
                 mLogger.LogDebug($"Should not send weekly summary yet {elapsedEventArgs.SignalTime.TimeOfDay}");
             }
 
-            await mTaskerAgentService.CheckForUpdates().ConfigureAwait(false);
+            IEnumerable<DateTime> datesGivenFeedbackByUser = await mTaskerAgentService.CheckForUpdates().ConfigureAwait(false);
+            mAgentTimingService.SignalDatesGivenFeedbackByUser(datesGivenFeedbackByUser);
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

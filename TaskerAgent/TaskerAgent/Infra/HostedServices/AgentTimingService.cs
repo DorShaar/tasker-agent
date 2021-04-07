@@ -1,9 +1,15 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using TaskerAgent.Infra.Options.Configurations;
 
 namespace TaskerAgent.Infra.HostedServices
 {
-    public class AgentTimingService
+    public class AgentTimingService: IDisposable, IAsyncDisposable
     {
+        private const string LastDateUserReportedFeedbackFileName = "last_date_user_reported_feedback";
         private const int DailySummaryTime = 7;
         private const DayOfWeek WeeklySummaryTime = DayOfWeek.Sunday;
 
@@ -11,6 +17,28 @@ namespace TaskerAgent.Infra.HostedServices
         private bool mWasUpdateAlreadyPerformed;
         private bool mWasDailySummarySent;
         private bool mWasWeeklySummarySent;
+        private DateTime mLastDateUserReportedAFeedback = DateTime.Now;
+
+        private readonly ILogger<AgentTimingService> mLogger;
+
+        public AgentTimingService(IOptionsMonitor<TaskerAgentConfiguration> options,
+            ILogger<AgentTimingService> logger)
+        {
+            mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            string lastDatePath = Path.Combine(options.CurrentValue.DatabaseDirectoryPath, LastDateUserReportedFeedbackFileName);
+
+            try
+            {
+                string lastDateUserReportedAFeedback = File.ReadAllText(lastDatePath);
+                mLastDateUserReportedAFeedback = DateTime.Parse(lastDateUserReportedAFeedback);
+            }
+            catch (Exception)
+            {
+                mLogger.LogWarning($"Could not read {LastDateUserReportedFeedbackFileName} properly." +
+                    "User feedbacks requests might be harmed");
+            }
+        }
 
         public void ResetOnMidnight(DateTime dateTime)
         {
@@ -59,6 +87,16 @@ namespace TaskerAgent.Infra.HostedServices
         public void SignalWeeklySummaryPerformed()
         {
             mWasWeeklySummarySent = true;
+        }
+
+        public void SignalDatesGivenFeedbackByUser(IEnumerable<DateTime> datesGivenFeedbackByUser)
+        {
+            // TODO order by date.
+            foreach(DateTime dateTime in datesGivenFeedbackByUser)
+            {
+                if (mLastDateUserReportedAFeedback < dateTime)
+                    mLastDateUserReportedAFeedback = dateTime;
+            }
         }
     }
 }
