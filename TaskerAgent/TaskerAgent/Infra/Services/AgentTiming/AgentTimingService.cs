@@ -3,12 +3,17 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using TaskerAgent.Infra.Options.Configurations;
+using Triangle.Time;
 
-namespace TaskerAgent.Infra.HostedServices
+namespace TaskerAgent.Infra.Services.AgentTiming
 {
     public class AgentTimingService: IDisposable, IAsyncDisposable
     {
+        private bool mDisposed;
+
         private const string LastDateUserReportedFeedbackFileName = "last_date_user_reported_feedback";
         private const int DailySummaryTime = 7;
         private const DayOfWeek WeeklySummaryTime = DayOfWeek.Sunday;
@@ -17,26 +22,33 @@ namespace TaskerAgent.Infra.HostedServices
         private bool mWasUpdateAlreadyPerformed;
         private bool mWasDailySummarySent;
         private bool mWasWeeklySummarySent;
-        private DateTime mLastDateUserReportedAFeedback = DateTime.Now;
+        private DateTime mLastDateUserReportedAFeedback;
 
+        private readonly IOptionsMonitor<TaskerAgentConfiguration> mOptions;
         private readonly ILogger<AgentTimingService> mLogger;
 
         public AgentTimingService(IOptionsMonitor<TaskerAgentConfiguration> options,
             ILogger<AgentTimingService> logger)
         {
+            mOptions = options ?? throw new ArgumentNullException(nameof(options));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            string lastDatePath = Path.Combine(options.CurrentValue.DatabaseDirectoryPath, LastDateUserReportedFeedbackFileName);
+            ReadLastDateUserReportedAsFeedback();
+        }
 
+        private void ReadLastDateUserReportedAsFeedback()
+        {
             try
             {
-                string lastDateUserReportedAFeedback = File.ReadAllText(lastDatePath);
+                string lastDateUserReportedAFeedback = File.ReadAllText(GetLastDatePath());
                 mLastDateUserReportedAFeedback = DateTime.Parse(lastDateUserReportedAFeedback);
             }
             catch (Exception)
             {
                 mLogger.LogWarning($"Could not read {LastDateUserReportedFeedbackFileName} properly." +
                     "User feedbacks requests might be harmed");
+
+                mLastDateUserReportedAFeedback = DateTime.Now;
             }
         }
 
@@ -91,12 +103,51 @@ namespace TaskerAgent.Infra.HostedServices
 
         public void SignalDatesGivenFeedbackByUser(IEnumerable<DateTime> datesGivenFeedbackByUser)
         {
-            // TODO order by date.
-            foreach(DateTime dateTime in datesGivenFeedbackByUser)
+            IOrderedEnumerable<DateTime> orderedDates =
+                datesGivenFeedbackByUser.OrderBy(date => date.Ticks);
+
+            foreach (DateTime dateTime in orderedDates)
             {
-                if (mLastDateUserReportedAFeedback < dateTime)
+                if (mLastDateUserReportedAFeedback.AddDays(1).Date == dateTime.Date)
                     mLastDateUserReportedAFeedback = dateTime;
             }
+        }
+
+        private string GetLastDatePath()
+        {
+            return Path.Combine(mOptions.CurrentValue.DatabaseDirectoryPath, LastDateUserReportedFeedbackFileName);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            mLogger.LogDebug("Closing timer");
+
+            if (mDisposed)
+                return;
+
+            if (disposing)
+            {
+                string lastDateUserReportedAFeedback =
+                    mLastDateUserReportedAFeedback.ToString(TimeConsts.TimeFormat);
+
+                File.WriteAllText(GetLastDatePath(), lastDateUserReportedAFeedback);
+
+                mLogger.LogInformation($"Updated last date user reported a feedback {lastDateUserReportedAFeedback }");
+            }
+
+            mDisposed = true;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Dispose();
+            return default;
         }
     }
 }

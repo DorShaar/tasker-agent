@@ -15,6 +15,7 @@ using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Persistence.Context;
 using TaskerAgent.Infra.Persistence.Repositories;
 using TaskerAgent.Infra.Services;
+using TaskerAgent.Infra.Services.AgentTiming;
 using TaskerAgent.Infra.Services.Email;
 using TaskerAgent.Infra.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.Infra.Services.SummaryReporters;

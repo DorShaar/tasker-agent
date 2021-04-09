@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services;
+using TaskerAgent.Infra.Services.AgentTiming;
 using Timer = System.Timers.Timer;
 
 namespace TaskerAgent.Infra.HostedServices
@@ -85,7 +86,9 @@ namespace TaskerAgent.Infra.HostedServices
                 mLogger.LogDebug($"Should not send weekly summary yet {elapsedEventArgs.SignalTime.TimeOfDay}");
             }
 
-            IEnumerable<DateTime> datesGivenFeedbackByUser = await mTaskerAgentService.CheckForUpdates().ConfigureAwait(false);
+            IEnumerable<DateTime> datesGivenFeedbackByUser =
+                await mTaskerAgentService.CheckForUpdates().ConfigureAwait(false);
+
             mAgentTimingService.SignalDatesGivenFeedbackByUser(datesGivenFeedbackByUser);
         }
 

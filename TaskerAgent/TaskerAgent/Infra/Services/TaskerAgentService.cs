@@ -28,7 +28,6 @@ namespace TaskerAgent.Infra.Services
         private readonly SummaryReporter mSummaryReporter;
         private readonly ILogger<TaskerAgentService> mLogger;
 
-        // TODO calendar tasks + reminders.
         public TaskerAgentService(IDbRepository<ITasksGroup> TaskGroupRepository,
             ITasksGroupFactory tasksGroupFactory,
             IRepetitiveTasksUpdater repetitiveTasksUpdater,
@@ -213,6 +212,8 @@ namespace TaskerAgent.Infra.Services
                 await mRepetitiveTasksUpdater.UpdateGroupByMessage(message).ConfigureAwait(false);
                 await mEmailService.MarkMessageAsRead(message.Id).ConfigureAwait(false);
             }
+
+            return new List<DateTime> { DateTime.Now };
         }
     }
 }
