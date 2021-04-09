@@ -28,9 +28,12 @@ namespace TaskerAgent.Infra.Services.Email
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
         private readonly ILogger<EmailService> mLogger;
 
+        private bool mDisposed;
+
         private SmtpServer mSmtpServer;
         private SmtpClient mSmtpClient;
         private bool mIsConnected;
+        private GmailService mGmailService;
 
         public EmailService(IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
                 ILogger<EmailService> logger)
@@ -41,7 +44,9 @@ namespace TaskerAgent.Infra.Services.Email
 
         public async Task Connect()
         {
-            string accessToken = await File.ReadAllTextAsync(mTaskerAgentOptions.CurrentValue.AccessTokenPath).ConfigureAwait(false);
+            string accessToken = await File.ReadAllTextAsync(
+                mTaskerAgentOptions.CurrentValue.AccessTokenPath).ConfigureAwait(false);
+
             mSmtpServer = new SmtpServer(StmpGmailAddress)
             {
                 ConnectType = SmtpConnectType.ConnectSSLAuto,
@@ -55,6 +60,31 @@ namespace TaskerAgent.Infra.Services.Email
             mIsConnected = true;
 
             mLogger.LogInformation($"Connected to smtp server {StmpGmailAddress}");
+
+            mGmailService = new GmailService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = await GetUserCredential().ConfigureAwait(false),
+                ApplicationName = ApplicationName,
+            });
+
+            mLogger.LogInformation("Connected to Gmail service");
+        }
+
+        private async Task<UserCredential> GetUserCredential()
+        {
+            using Stream stream =
+                new FileStream(mTaskerAgentOptions.CurrentValue.CredentialsPath, FileMode.Open, FileAccess.Read);
+
+            // The file token.json stores the user's access and refresh tokens, and is created
+            // automatically when the authorization flow completes for the first time.
+            const string credPath = "token.json";
+
+            return await GoogleWebAuthorizationBroker.AuthorizeAsync(
+                GoogleClientSecrets.Load(stream).Secrets,
+                mScopes,
+                "dordatas",
+                CancellationToken.None,
+                new FileDataStore(credPath, true)).ConfigureAwait(false);
         }
 
         public Task SendMessage(string subject, string message)
@@ -86,15 +116,12 @@ namespace TaskerAgent.Infra.Services.Email
 
         public async Task<IEnumerable<MessageInfo>> ReadMessages()
         {
+            if (!mIsConnected)
+                throw new InvalidOperationException("Could not read messagess. Please connect first");
+
             List<MessageInfo> messages = new List<MessageInfo>();
 
-            var service = new GmailService(new BaseClientService.Initializer()
-            {
-                HttpClientInitializer = await GetUserCredential().ConfigureAwait(false),
-                ApplicationName = ApplicationName,
-            });
-
-            var messagesListRequest = service.Users.Messages.List(UserId);
+            var messagesListRequest = mGmailService.Users.Messages.List(UserId);
             messagesListRequest.LabelIds = new List<string>() { TaskerAgentLable, UnreadMessageLable };
 
             ListMessagesResponse listMessagesResponse = await messagesListRequest.ExecuteAsync().ConfigureAwait(false);
@@ -104,7 +131,7 @@ namespace TaskerAgent.Infra.Services.Email
 
             foreach (Message message in listMessagesResponse.Messages)
             {
-                var messageGetRequest = service.Users.Messages.Get(UserId, message.Id);
+                var messageGetRequest = mGmailService.Users.Messages.Get(UserId, message.Id);
                 var messageResponse = await messageGetRequest.ExecuteAsync().ConfigureAwait(false);
 
                 if (messageResponse.Payload.Body.Data != null)
@@ -116,22 +143,6 @@ namespace TaskerAgent.Infra.Services.Email
             return messages;
         }
 
-        private async Task<UserCredential> GetUserCredential()
-        {
-            using FileStream stream = new FileStream(mTaskerAgentOptions.CurrentValue.CredentialsPath, FileMode.Open, FileAccess.Read);
-
-            // The file token.json stores the user's access and refresh tokens, and is created
-            // automatically when the authorization flow completes for the first time.
-            const string credPath = "token.json";
-
-            return await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                GoogleClientSecrets.Load(stream).Secrets,
-                mScopes,
-                "dordatas",
-                CancellationToken.None,
-                new FileDataStore(credPath, true)).ConfigureAwait(false);
-        }
-
         private string ConvertFromBase64(string base64Text)
         {
             byte[] base64EncodedBytes = Convert.FromBase64String(base64Text);
@@ -140,24 +151,44 @@ namespace TaskerAgent.Infra.Services.Email
 
         public async Task MarkMessageAsRead(string messageId)
         {
-            var service = new GmailService(new BaseClientService.Initializer()
-            {
-                HttpClientInitializer = await GetUserCredential().ConfigureAwait(false),
-                ApplicationName = ApplicationName,
-            });
+            if (!mIsConnected)
+                throw new InvalidOperationException("Could not mark messages as read. Please connect first");
 
             ModifyMessageRequest modifyMessageRequest = new ModifyMessageRequest()
             {
                 RemoveLabelIds = new List<string> { UnreadMessageLable }
             };
 
-            var messageModifyRequest = service.Users.Messages.Modify(modifyMessageRequest, UserId, messageId);
+            var messageModifyRequest = mGmailService.Users.Messages.Modify(modifyMessageRequest, UserId, messageId);
             var messageResponse = await messageModifyRequest.ExecuteAsync().ConfigureAwait(false);
 
             if (messageResponse.LabelIds.Contains(UnreadMessageLable))
                 mLogger.LogWarning($"Failed to remove label {UnreadMessageLable} from message id {messageId}");
             else
                 mLogger.LogInformation($"Marked message id {messageId} as read");
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (mDisposed)
+                return;
+
+            if (disposing)
+                mGmailService.Dispose();
+
+            mDisposed = true;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Dispose();
+            return default;
         }
     }
 }
