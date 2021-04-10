@@ -213,7 +213,7 @@ namespace TaskerAgent.Infra.Services
                 await mEmailService.MarkMessageAsRead(message.Id).ConfigureAwait(false);
             }
 
-            return new List<DateTime> { DateTime.Now };
+            return messages.Select(message => message.DateCreated);
         }
     }
 }

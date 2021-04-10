@@ -31,7 +31,8 @@ namespace TaskerAgantTests.Infra.Services.Email
             configuration.CurrentValue.CredentialsPath = @"C:\Dor\Projects\tasker-agent\TaskerAgent\tokens\client_secret.json";
 
             EmailService emailService = new EmailService(configuration, NullLogger<EmailService>.Instance);
-            await emailService.ReadMessages().ConfigureAwait(false);
+            await emailService.Connect().ConfigureAwait(false);
+            await emailService.ReadMessages(true).ConfigureAwait(false);
         }
     }
 }

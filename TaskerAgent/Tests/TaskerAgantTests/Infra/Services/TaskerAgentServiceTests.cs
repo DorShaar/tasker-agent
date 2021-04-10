@@ -143,7 +143,7 @@ Eat bamba. Expected: 2.Actual: 6
 ";
 
             IEmailService emailService = A.Fake<IEmailService>();
-            A.CallTo(() => emailService.ReadMessages()).Returns(new MessageInfo[] { new MessageInfo("id", message) });
+            A.CallTo(() => emailService.ReadMessages(false)).Returns(new MessageInfo[] { new MessageInfo("id", message) });
             mServiceCollection.AddSingleton(emailService);
 
             ServiceProvider serviceProvider = mServiceCollection.BuildServiceProvider();

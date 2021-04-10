@@ -9,7 +9,7 @@ namespace TaskerAgent.App.Services.Email
     {
         Task Connect();
         Task SendMessage(string subject, string message);
-        Task<IEnumerable<MessageInfo>> ReadMessages();
+        Task<IEnumerable<MessageInfo>> ReadMessages(bool shouldReadAll = false);
         Task MarkMessageAsRead(string messageId);
     }
 }
