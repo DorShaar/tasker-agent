@@ -11,10 +11,10 @@ using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.RepetitiveTasks;
 using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.App.TasksProducers;
+using TaskerAgent.Domain.Email;
 using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksClusters;
 using TaskerAgent.Infra.Options.Configurations;
-using TaskerAgent.Infra.Services.Email;
 using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters

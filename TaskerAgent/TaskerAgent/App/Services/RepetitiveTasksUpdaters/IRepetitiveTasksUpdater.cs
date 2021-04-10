@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using TaskData.TasksGroups;
-using TaskerAgent.Infra.Services.Email;
+using TaskerAgent.Domain.Email;
 
 namespace TaskerAgent.App.Services.RepetitiveTasksUpdaters
 {

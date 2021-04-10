@@ -12,6 +12,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using TaskerAgent.App.Services.Email;
+using TaskerAgent.Domain.Email;
 using TaskerAgent.Infra.Options.Configurations;
 
 namespace TaskerAgent.Infra.Services.Email

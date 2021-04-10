@@ -1,6 +1,5 @@
 ﻿using FakeItEasy;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -10,11 +9,11 @@ using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.Services.Email;
+using TaskerAgent.Domain.Email;
 using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services;
-using TaskerAgent.Infra.Services.Email;
 using Xunit;
 
 namespace TaskerAgantTests.Infra.Services

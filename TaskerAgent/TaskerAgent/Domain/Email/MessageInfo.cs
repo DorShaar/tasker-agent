@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TaskerAgent.Infra.Services.Email
+namespace TaskerAgent.Domain.Email
 {
     public class MessageInfo
     {

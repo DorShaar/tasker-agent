@@ -44,6 +44,7 @@
 
   <ItemGroup>
     <Folder Include="Infra\HostedServices\" />
+    <Folder Include="Infra\Services\Calendar\" />
   </ItemGroup>
 
 </Project>
