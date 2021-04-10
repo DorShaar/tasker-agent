@@ -1,0 +1,90 @@
+{
+  "TasksChildren": {
+    "1029": {
+      "Frequency": 1,
+      "OccurrenceDays": 0,
+      "MeasureType": 1,
+      "Expected": 2,
+      "Actual": 0,
+      "Score": 1,
+      "ID": "1029",
+      "GroupName": "03/04/2021",
+      "Description": "Drink Water",
+      "TaskStatusHistory": {
+        "StatusHistory": [
+          {
+            "DateTime": "2021-03-29T19:32:20.1574464+03:00",
+            "Status": 0,
+            "Reason": "Created"
+          }
+        ]
+      },
+      "TaskMeasurement": null
+    },
+    "1030": {
+      "Frequency": 1,
+      "OccurrenceDays": 0,
+      "MeasureType": 2,
+      "Expected": 3,
+      "Actual": 0,
+      "Score": 1,
+      "ID": "1030",
+      "GroupName": "03/04/2021",
+      "Description": "Exercise",
+      "TaskStatusHistory": {
+        "StatusHistory": [
+          {
+            "DateTime": "2021-03-29T19:32:20.1574729+03:00",
+            "Status": 0,
+            "Reason": "Created"
+          }
+        ]
+      },
+      "TaskMeasurement": null
+    },
+    "1031": {
+      "Frequency": 1,
+      "OccurrenceDays": 0,
+      "MeasureType": 0,
+      "Expected": 7,
+      "Actual": 0,
+      "Score": 1,
+      "ID": "1031",
+      "GroupName": "03/04/2021",
+      "Description": "Sleep hours",
+      "TaskStatusHistory": {
+        "StatusHistory": [
+          {
+            "DateTime": "2021-03-29T19:32:20.1574784+03:00",
+            "Status": 0,
+            "Reason": "Created"
+          }
+        ]
+      },
+      "TaskMeasurement": null
+    },
+    "1032": {
+      "OccurrenceDays": 64,
+      "Frequency": 2,
+      "MeasureType": 2,
+      "Expected": 2,
+      "Actual": 0,
+      "Score": 1,
+      "ID": "1032",
+      "GroupName": "03/04/2021",
+      "Description": "Eat bamba",
+      "TaskStatusHistory": {
+        "StatusHistory": [
+          {
+            "DateTime": "2021-03-29T19:32:20.1663565+03:00",
+            "Status": 0,
+            "Reason": "Created"
+          }
+        ]
+      },
+      "TaskMeasurement": null
+    }
+  },
+  "ID": "1028",
+  "Name": "03/04/2021"
+}

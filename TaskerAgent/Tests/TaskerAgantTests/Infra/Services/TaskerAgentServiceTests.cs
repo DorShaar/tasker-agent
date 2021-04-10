@@ -21,6 +21,7 @@ namespace TaskerAgantTests.Infra.Services
 {
     public class TaskerAgentServiceTests
     {
+        private const string DatabaseTestFilesPath = "TaskerAgentDB";
         private readonly IServiceCollection mServiceCollection;
 
         public TaskerAgentServiceTests()
@@ -142,36 +143,50 @@ Sleep hours. Expected: 7. Actual:    5.
 Eat bamba. Expected: 2.Actual: 6
 ";
 
+            IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
+            configuration.CurrentValue.DatabaseDirectoryPath = DatabaseTestFilesPath;
+            mServiceCollection.AddSingleton(configuration);
+
             IEmailService emailService = A.Fake<IEmailService>();
-            A.CallTo(() => emailService.ReadMessages()).Returns(new MessageInfo[] { new MessageInfo("id", message) });
+            A.CallTo(() => emailService.ReadMessages(false)).Returns(new MessageInfo[] { new MessageInfo("id", message, DateTime.Now) });
             mServiceCollection.AddSingleton(emailService);
 
             ServiceProvider serviceProvider = mServiceCollection.BuildServiceProvider();
             TaskerAgentService service = serviceProvider.GetRequiredService<TaskerAgentService>();
-
             IDbRepository<ITasksGroup> realTasksGroupRepository = serviceProvider.GetRequiredService<IDbRepository<ITasksGroup>>();
 
-            ITasksGroup returnedTasksGroup = null;
-
-            await service.CheckForUpdates().ConfigureAwait(false);
-
-            IDbRepository<ITasksGroup> fakeTasksGroupRepository = A.Fake<IDbRepository<ITasksGroup>>(x => x.Wrapping(realTasksGroupRepository));
-
-            A.CallTo(() => fakeTasksGroupRepository.AddOrUpdateAsync(A<ITasksGroup>.That.Matches(group => group.Name == "03/04/2021")))
-                .MustHaveHappenedOnceExactly();
+            ITasksGroup returnedTasksGroup = await realTasksGroupRepository.FindAsync("03-04-2021").ConfigureAwait(false);
 
             List<IWorkTask> tasks = returnedTasksGroup.GetAllTasks().ToList();
 
             GeneralRepetitiveMeasureableTask task1 = tasks[0] as GeneralRepetitiveMeasureableTask;
-            Assert.True(task1.Description == "Drink Water" && task1.Actual == 1);
+            Assert.True(task1.Description == "Drink Water" && task1.Actual == 0);
 
             GeneralRepetitiveMeasureableTask task2 = tasks[1] as GeneralRepetitiveMeasureableTask;
-            Assert.True(task2.Description == "Exercise" && task2.Actual == 1);
+            Assert.True(task2.Description == "Exercise" && task2.Actual == 0);
 
             GeneralRepetitiveMeasureableTask task3 = tasks[2] as GeneralRepetitiveMeasureableTask;
-            Assert.True(task3.Description == "Sleep hours" && task3.Actual == 5);
+            Assert.True(task3.Description == "Sleep hours" && task3.Actual == 0);
 
             GeneralRepetitiveMeasureableTask task4 = tasks[3] as GeneralRepetitiveMeasureableTask;
+            Assert.True(task4.Description == "Eat bamba" && task4.Actual == 0);
+
+            await service.CheckForUpdates().ConfigureAwait(false);
+
+            returnedTasksGroup = await realTasksGroupRepository.FindAsync("03-04-2021").ConfigureAwait(false);
+
+            tasks = returnedTasksGroup.GetAllTasks().ToList();
+
+            task1 = tasks[0] as GeneralRepetitiveMeasureableTask;
+            Assert.True(task1.Description == "Drink Water" && task1.Actual == 1);
+
+            task2 = tasks[1] as GeneralRepetitiveMeasureableTask;
+            Assert.True(task2.Description == "Exercise" && task2.Actual == 1);
+
+            task3 = tasks[2] as GeneralRepetitiveMeasureableTask;
+            Assert.True(task3.Description == "Sleep hours" && task3.Actual == 5);
+
+            task4 = tasks[3] as GeneralRepetitiveMeasureableTask;
             Assert.True(task4.Description == "Eat bamba" && task4.Actual == 6);
         }
     }

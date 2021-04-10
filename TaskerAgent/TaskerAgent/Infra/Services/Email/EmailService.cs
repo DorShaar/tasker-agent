@@ -114,7 +114,7 @@ namespace TaskerAgent.Infra.Services.Email
             return Task.CompletedTask;
         }
 
-        public async Task<IEnumerable<MessageInfo>> ReadMessages()
+        public async Task<IEnumerable<MessageInfo>> ReadMessages(bool shouldReadAll = false)
         {
             if (!mIsConnected)
                 throw new InvalidOperationException("Could not read messagess. Please connect first");
@@ -122,7 +122,7 @@ namespace TaskerAgent.Infra.Services.Email
             List<MessageInfo> messages = new List<MessageInfo>();
 
             var messagesListRequest = mGmailService.Users.Messages.List(UserId);
-            messagesListRequest.LabelIds = new List<string>() { TaskerAgentLable, UnreadMessageLable };
+            messagesListRequest.LabelIds = BuildLabels(shouldReadAll);
 
             ListMessagesResponse listMessagesResponse = await messagesListRequest.ExecuteAsync().ConfigureAwait(false);
 
@@ -134,13 +134,33 @@ namespace TaskerAgent.Infra.Services.Email
                 var messageGetRequest = mGmailService.Users.Messages.Get(UserId, message.Id);
                 var messageResponse = await messageGetRequest.ExecuteAsync().ConfigureAwait(false);
 
+                DateTime dateCreated = DateTimeOffset.FromUnixTimeMilliseconds(message.InternalDate.Value).DateTime;
+
                 if (messageResponse.Payload.Body.Data != null)
-                    messages.Add(new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Body.Data)));
+                {
+                    messages.Add(
+                        new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Body.Data), dateCreated));
+                }
                 else
-                    messages.Add(new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Parts[0].Body.Data)));
+                {
+                    messages.Add(
+                        new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Parts[0].Body.Data), dateCreated));
+                }
             }
 
             return messages;
+        }
+
+        private List<string> BuildLabels(bool shouldReadAll)
+        {
+            List<string> labels = new List<string>() { TaskerAgentLable };
+
+            if (!shouldReadAll)
+            {
+                labels.Add(UnreadMessageLable);
+            }
+
+            return labels;
         }
 
         private string ConvertFromBase64(string base64Text)
