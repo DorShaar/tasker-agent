@@ -28,6 +28,9 @@
     <None Update="Infra\Options\Configurations\Config.yaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="TaskerAgentDB\03-04-2021">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="TaskerAgentDB\tasker_agent_id_producer.db">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
