@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Infra\HostedServices\**" />
+    <EmbeddedResource Remove="Infra\HostedServices\**" />
+    <None Remove="Infra\HostedServices\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FakeItEasy" Version="7.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.7.1" />
     <PackageReference Include="xunit" Version="2.4.1" />
@@ -40,10 +46,6 @@
     <None Update="TestFiles\repetitive_tasks.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Infra\HostedServices\" />
   </ItemGroup>
 
 </Project>

@@ -1,27 +1,31 @@
 ﻿using FakeItEasy;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.Services.Email;
+using TaskerAgent.Domain.Email;
 using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services;
-using TaskerAgent.Infra.Services.Email;
+using Triangle.Time;
 using Xunit;
 
 namespace TaskerAgantTests.Infra.Services
 {
     public class TaskerAgentServiceTests
     {
+        private const string TestFilesDirectory = "TestFiles";
         private const string DatabaseTestFilesPath = "TaskerAgentDB";
+
+        private readonly string mInputFileName = Path.Combine(TestFilesDirectory, "repetitive_tasks.txt");
         private readonly IServiceCollection mServiceCollection;
 
         public TaskerAgentServiceTests()
@@ -29,8 +33,47 @@ namespace TaskerAgantTests.Infra.Services
             mServiceCollection = new ServiceCollection();
             mServiceCollection.UseDI();
 
+            IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
+            configuration.CurrentValue.DatabaseDirectoryPath = DatabaseTestFilesPath;
+            configuration.CurrentValue.InputFilePath = mInputFileName;
+            mServiceCollection.AddSingleton(configuration);
+
             TaskerAgentService service = mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
-            service.UpdateRepetitiveTasks().ConfigureAwait(false);
+
+            service.UpdateRepetitiveTasks().Wait();
+        }
+
+        [Fact]
+        public async Task UpdateRepetitiveTasks_ShouldModifyExpected_ExpectedValueIsModified()
+        {
+            const int dayOfMonthWithDesiredExpectedValue = 17;
+
+            DateTime specificDateTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, dayOfMonthWithDesiredExpectedValue);
+            string databaseFileName = specificDateTime.ToString(TimeConsts.TimeFormat);
+            databaseFileName = databaseFileName.Replace('\\', '-');
+            databaseFileName = databaseFileName.Replace('/', '-');
+
+            IOptionsMonitor<TaskerAgentConfiguration> options =
+                mServiceCollection.BuildServiceProvider().GetRequiredService<IOptionsMonitor<TaskerAgentConfiguration>>();
+
+            string specificDayDatabase = Path.Combine(options.CurrentValue.DatabaseDirectoryPath, databaseFileName);
+
+            string contentBeforeChange = await File.ReadAllTextAsync(specificDayDatabase).ConfigureAwait(false);
+            const string expectedStringToBeFound = "\"Expected\": 5";
+            Assert.Contains(expectedStringToBeFound, contentBeforeChange, StringComparison.OrdinalIgnoreCase);
+
+            const string stringToReplaceWith = "\"Expected\": 90";
+            string contentAfterChange = contentBeforeChange.Replace(expectedStringToBeFound, stringToReplaceWith);
+            await File.WriteAllTextAsync(specificDayDatabase, contentAfterChange).ConfigureAwait(false);
+
+            contentAfterChange = await File.ReadAllTextAsync(specificDayDatabase).ConfigureAwait(false);
+            Assert.DoesNotContain(expectedStringToBeFound, contentAfterChange, StringComparison.OrdinalIgnoreCase);
+
+            TaskerAgentService service = mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
+            await service.UpdateRepetitiveTasks().ConfigureAwait(false);
+
+            string contentAfterUpdate = await File.ReadAllTextAsync(specificDayDatabase).ConfigureAwait(false);
+            Assert.Contains(expectedStringToBeFound, contentAfterUpdate, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]

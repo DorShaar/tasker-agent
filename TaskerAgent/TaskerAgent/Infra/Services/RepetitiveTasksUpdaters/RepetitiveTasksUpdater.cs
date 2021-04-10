@@ -11,10 +11,10 @@ using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.RepetitiveTasks;
 using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.App.TasksProducers;
+using TaskerAgent.Domain.Email;
 using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksClusters;
 using TaskerAgent.Infra.Options.Configurations;
-using TaskerAgent.Infra.Services.Email;
 using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
@@ -81,47 +81,41 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             return taskGroupResult.Value;
         }
 
-        private async Task UpdateDailyTasks(ITasksGroup currentTaskGroup, IEnumerable<IWorkTask> tasksToUpdateAccordingly)
+        private async Task UpdateDailyTasks(ITasksGroup currentTaskGroup,
+            IEnumerable<DailyRepetitiveMeasureableTask> tasksToUpdateAccordingly)
         {
-            foreach (IWorkTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
+            foreach (DailyRepetitiveMeasureableTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
             {
-                if (!(taskToUpdateAccordingly is DailyRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
-                    continue;
-
-                UpdateGroup(currentTaskGroup, repititiveTaskToUpdateAccordingly);
+                UpdateGroup(currentTaskGroup, taskToUpdateAccordingly);
             }
 
             await mTasksGroupRepository.AddOrUpdateAsync(currentTaskGroup).ConfigureAwait(false);
         }
 
-        private async Task UpdateWeeklyTasks(ITasksGroup currentTaskGroup, IEnumerable<IWorkTask> tasksToUpdateAccordingly,
+        private async Task UpdateWeeklyTasks(ITasksGroup currentTaskGroup,
+            IEnumerable<WeeklyRepetitiveMeasureableTask> tasksToUpdateAccordingly,
             DateTime date)
         {
-            foreach (IWorkTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
+            foreach (WeeklyRepetitiveMeasureableTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
             {
-                if (!(taskToUpdateAccordingly is WeeklyRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
-                    continue;
-
-                if (repititiveTaskToUpdateAccordingly.IsDayIsOneOfWeeklyOccurrence(date.DayOfWeek))
+                if (taskToUpdateAccordingly.IsDayIsOneOfWeeklyOccurrence(date.DayOfWeek))
                 {
-                    UpdateGroup(currentTaskGroup, repititiveTaskToUpdateAccordingly);
+                    UpdateGroup(currentTaskGroup, taskToUpdateAccordingly);
                 }
             }
 
             await mTasksGroupRepository.AddOrUpdateAsync(currentTaskGroup).ConfigureAwait(false);
         }
 
-        private async Task UpdateMonthlyTasks(ITasksGroup currentTaskGroup, IEnumerable<IWorkTask> tasksToUpdateAccordingly,
+        private async Task UpdateMonthlyTasks(ITasksGroup currentTaskGroup,
+            IEnumerable<MonthlyRepetitiveMeasureableTask> tasksToUpdateAccordingly,
             DateTime date)
         {
-            foreach (IWorkTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
+            foreach (MonthlyRepetitiveMeasureableTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
             {
-                if (!(taskToUpdateAccordingly is MonthlyRepetitiveMeasureableTask repititiveTaskToUpdateAccordingly))
-                    continue;
-
-                if (repititiveTaskToUpdateAccordingly.IsDayIsOneOfMonthlyOccurrence(date.Day))
+                if (taskToUpdateAccordingly.IsDayIsOneOfMonthlyOccurrence(date.Day))
                 {
-                    UpdateGroup(currentTaskGroup, repititiveTaskToUpdateAccordingly);
+                    UpdateGroup(currentTaskGroup, taskToUpdateAccordingly);
                 }
             }
 
@@ -139,8 +133,8 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
 
                 if (repititiveTaskToUpdateAccordingly.Description.Equals(currentTask.Description, StringComparison.OrdinalIgnoreCase))
                 {
-                    UpdateCurrentTask(currentRepititiveTask, repititiveTaskToUpdateAccordingly);
                     isNewTask = false;
+                    UpdateCurrentTaskIfNeeded(currentRepititiveTask, repititiveTaskToUpdateAccordingly);
                 }
             }
 
@@ -148,15 +142,46 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
                 CreateNewTask(currentTaskGroup, repititiveTaskToUpdateAccordingly);
         }
 
-        private void UpdateCurrentTask(IRepetitiveMeasureableTask currentTask,
+        private void UpdateCurrentTaskIfNeeded(IRepetitiveMeasureableTask currentTask,
             IRepetitiveMeasureableTask taskToUpdateAccordingly)
         {
-            if (currentTask.Expected != taskToUpdateAccordingly.Expected ||
-                currentTask.MeasureType != taskToUpdateAccordingly.MeasureType)
+            if (IsTaskShouldBeUpdated(currentTask, taskToUpdateAccordingly))
             {
                 currentTask.Expected = taskToUpdateAccordingly.Expected;
                 currentTask.MeasureType = taskToUpdateAccordingly.MeasureType;
             }
+
+            if (currentTask is MonthlyRepetitiveMeasureableTask currentMonthlyTask &&
+                taskToUpdateAccordingly is MonthlyRepetitiveMeasureableTask monthlyTaskToUpdateAccordingly)
+            {
+                UpdateCurrentMonthlyTaskIfNeeded(currentMonthlyTask, monthlyTaskToUpdateAccordingly);
+            }
+        }
+
+        private bool IsTaskShouldBeUpdated(IRepetitiveMeasureableTask currentTask,
+            IRepetitiveMeasureableTask taskToUpdateAccordingly)
+        {
+            return currentTask.Expected != taskToUpdateAccordingly.Expected ||
+                currentTask.MeasureType != taskToUpdateAccordingly.MeasureType;
+        }
+
+        private void UpdateCurrentMonthlyTaskIfNeeded(MonthlyRepetitiveMeasureableTask currentTask,
+            MonthlyRepetitiveMeasureableTask taskToUpdateAccordingly)
+        {
+            List<int> firstNotSecond = currentTask.DaysOfMonth.Except(taskToUpdateAccordingly.DaysOfMonth).ToList();
+
+            if (firstNotSecond.Count == 0)
+            {
+                List<int> secondNotFirst = taskToUpdateAccordingly.DaysOfMonth.Except(currentTask.DaysOfMonth).ToList();
+                if (secondNotFirst.Count == 0)
+                {
+                    return;
+                }
+            }
+
+            mLogger.LogDebug($"Updating Days of month for task {currentTask.Description}");
+            currentTask.DaysOfMonth.Clear();
+            currentTask.DaysOfMonth.AddRange(taskToUpdateAccordingly.DaysOfMonth);
         }
 
         private void CreateNewTask(ITasksGroup currentTaskGroup, IRepetitiveMeasureableTask taskToUpdateAccordingly)
