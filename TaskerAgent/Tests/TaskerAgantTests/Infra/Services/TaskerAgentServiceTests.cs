@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using TaskData.TasksGroups;
@@ -20,7 +21,10 @@ namespace TaskerAgantTests.Infra.Services
 {
     public class TaskerAgentServiceTests
     {
+        private const string TestFilesDirectory = "TestFiles";
         private const string DatabaseTestFilesPath = "TaskerAgentDB";
+
+        private readonly string mInputFileName = Path.Combine(TestFilesDirectory, "repetitive_tasks.txt");
         private readonly IServiceCollection mServiceCollection;
 
         public TaskerAgentServiceTests()
@@ -28,8 +32,14 @@ namespace TaskerAgantTests.Infra.Services
             mServiceCollection = new ServiceCollection();
             mServiceCollection.UseDI();
 
+            IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
+            configuration.CurrentValue.DatabaseDirectoryPath = DatabaseTestFilesPath;
+            configuration.CurrentValue.InputFilePath = mInputFileName;
+            mServiceCollection.AddSingleton(configuration);
+
             TaskerAgentService service = mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
-            service.UpdateRepetitiveTasks().ConfigureAwait(false);
+
+            service.UpdateRepetitiveTasks().Wait();
         }
 
         [Fact]

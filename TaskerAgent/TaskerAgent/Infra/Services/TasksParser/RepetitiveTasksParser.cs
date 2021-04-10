@@ -36,7 +36,7 @@ namespace TaskerAgent.Infra.Services.TasksParser
 
             foreach (string line in lines)
             {
-                string[] parameters = line.Split(',');
+                string[] parameters = line.Trim(',').Split(',');
 
                 CreateRepetitiveTaskFromParameters(taskGroup, parameters);
             }
@@ -68,21 +68,24 @@ namespace TaskerAgent.Infra.Services.TasksParser
                     return;
                 }
 
-                if (parseComponents.Frequency == Frequency.Weekly)
+                if (parameters.Length > 4)
                 {
-                    if (!parseComponents.SetOccurrenceDays(parameters[4..]))
+                    if (parseComponents.Frequency == Frequency.Weekly)
                     {
-                        mLogger.LogError($"Could not set OccurrenceDays for task {taskDescription}");
-                        return;
+                        if (!parseComponents.SetOccurrenceDays(parameters[4..]))
+                        {
+                            mLogger.LogError($"Could not set OccurrenceDays for task {taskDescription}");
+                            return;
+                        }
                     }
-                }
 
-                if (parseComponents.Frequency == Frequency.Monthly)
-                {
-                    if (!parseComponents.SetDaysOfMonth(parameters[4..]))
+                    if (parseComponents.Frequency == Frequency.Monthly)
                     {
-                        mLogger.LogError($"Could not set days of month for task {taskDescription}");
-                        return;
+                        if (!parseComponents.SetDaysOfMonth(parameters[4..]))
+                        {
+                            mLogger.LogError($"Could not set days of month for task {taskDescription}");
+                            return;
+                        }
                     }
                 }
 
@@ -94,15 +97,40 @@ namespace TaskerAgent.Infra.Services.TasksParser
                     return;
                 }
 
-                OperationResult<IWorkTask> createTaskResult =
-                    mTaskGroupFactory.CreateTask(taskGroup, taskDescription, taskProducer);
+                OperationResult<IWorkTask> createTaskResult = mTaskGroupFactory.CreateTask(taskGroup, taskDescription, taskProducer);
 
                 if (!createTaskResult.Success)
                     mLogger.LogError($"Could not create task {taskDescription}");
             }
             catch (IndexOutOfRangeException ex)
             {
-                mLogger.LogError(ex, "Failed to Parse");
+                LogError(ex, parameters);
+            }
+        }
+
+        private void LogError(IndexOutOfRangeException ex, string[] parameters)
+        {
+            switch (parameters.Length)
+            {
+                case 0:
+                    mLogger.LogError(ex, "No parameters given");
+                    break;
+
+                case 1:
+                    mLogger.LogError(ex, $"No frequency given for task {parameters[0]}");
+                    break;
+
+                case 2:
+                    mLogger.LogError(ex, $"No expected given for task {parameters[0]}");
+                    break;
+
+                case 3:
+                    mLogger.LogError(ex, $"No measurement type given for task {parameters[0]}");
+                    break;
+
+                default:
+                    mLogger.LogError(ex, $"Failed to parse task {parameters[0]}");
+                    break;
             }
         }
 

@@ -18,7 +18,10 @@ namespace TaskerAgent.Domain.RepetitiveTasks
             int expected,
             int score) : base(id, description, frequency, measureType, expected, score)
         {
-            foreach(int dayOfMonth in daysOfMonth)
+            if (daysOfMonth == null)
+                return;
+
+            foreach (int dayOfMonth in daysOfMonth)
             {
                 if (dayOfMonth <= 0 || dayOfMonth >= 31)
                     continue;

@@ -18,7 +18,7 @@ namespace TaskerAgent.Domain.RepetitiveTasks
             int expected,
             int score) : base(id, description, frequency, measureType, expected, score)
         {
-            OccurrenceDays = occurrenceDays;
+            OccurrenceDays = occurrenceDays == Days.EveryDay ? Days.Saturday : occurrenceDays;
         }
 
         [JsonConstructor]
