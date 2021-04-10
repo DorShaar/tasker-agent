@@ -12,8 +12,7 @@ namespace TaskerAgantTests.Infra.Services.Calendar
 {
     public class CalendarTaskerServiceTests
     {
-        //[Fact(Skip = "Requires real calendar. To be tested manually")]
-        [Fact]
+        [Fact(Skip = "Requires real calendar. To be tested manually")]
         public async Task PullEvents_AsExpected()
         {
             IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
@@ -24,8 +23,7 @@ namespace TaskerAgantTests.Infra.Services.Calendar
             await calendarService.PullEvents().ConfigureAwait(false);
         }
 
-        //[Fact(Skip = "Requires real calendar. To be tested manually")]
-        [Fact]
+        [Fact(Skip = "Requires real calendar. To be tested manually")]
         public async Task PushEvent_AsExpected()
         {
             IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();

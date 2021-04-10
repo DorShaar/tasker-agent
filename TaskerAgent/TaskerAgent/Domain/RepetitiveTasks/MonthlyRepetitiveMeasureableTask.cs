@@ -8,6 +8,8 @@ namespace TaskerAgent.Domain.RepetitiveTasks
     [JsonObject(MemberSerialization.OptIn)]
     public class MonthlyRepetitiveMeasureableTask : GeneralRepetitiveMeasureableTask
     {
+        private const int DefaultDayInMonth = 28;
+
         [JsonProperty]
         public List<int> DaysOfMonth { get; } = new List<int>();
 
@@ -19,11 +21,17 @@ namespace TaskerAgent.Domain.RepetitiveTasks
             int score) : base(id, description, frequency, measureType, expected, score)
         {
             if (daysOfMonth == null)
+            {
+                DaysOfMonth.Add(DefaultDayInMonth);
                 return;
+            }
 
             foreach (int dayOfMonth in daysOfMonth)
             {
                 if (dayOfMonth <= 0 || dayOfMonth >= 31)
+                    continue;
+
+                if (DaysOfMonth.Contains(dayOfMonth))
                     continue;
 
                 DaysOfMonth.Add(dayOfMonth);

@@ -15,6 +15,7 @@ using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services;
+using Triangle.Time;
 using Xunit;
 
 namespace TaskerAgantTests.Infra.Services
@@ -35,12 +36,44 @@ namespace TaskerAgantTests.Infra.Services
             IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
             configuration.CurrentValue.DatabaseDirectoryPath = DatabaseTestFilesPath;
             configuration.CurrentValue.InputFilePath = mInputFileName;
-            configuration.CurrentValue.DaysToKeepForward = 8;
             mServiceCollection.AddSingleton(configuration);
 
             TaskerAgentService service = mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
 
             service.UpdateRepetitiveTasks().Wait();
+        }
+
+        [Fact]
+        public async Task UpdateRepetitiveTasks_ShouldModifyExpected_ExpectedValueIsModified()
+        {
+            const int dayOfMonthWithDesiredExpectedValue = 17;
+
+            DateTime specificDateTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, dayOfMonthWithDesiredExpectedValue);
+            string databaseFileName = specificDateTime.ToString(TimeConsts.TimeFormat);
+            databaseFileName = databaseFileName.Replace('\\', '-');
+            databaseFileName = databaseFileName.Replace('/', '-');
+
+            IOptionsMonitor<TaskerAgentConfiguration> options =
+                mServiceCollection.BuildServiceProvider().GetRequiredService<IOptionsMonitor<TaskerAgentConfiguration>>();
+
+            string specificDayDatabase = Path.Combine(options.CurrentValue.DatabaseDirectoryPath, databaseFileName);
+
+            string contentBeforeChange = await File.ReadAllTextAsync(specificDayDatabase).ConfigureAwait(false);
+            const string expectedStringToBeFound = "\"Expected\": 5";
+            Assert.Contains(expectedStringToBeFound, contentBeforeChange, StringComparison.OrdinalIgnoreCase);
+
+            const string stringToReplaceWith = "\"Expected\": 90";
+            string contentAfterChange = contentBeforeChange.Replace(expectedStringToBeFound, stringToReplaceWith);
+            await File.WriteAllTextAsync(specificDayDatabase, contentAfterChange).ConfigureAwait(false);
+
+            contentAfterChange = await File.ReadAllTextAsync(specificDayDatabase).ConfigureAwait(false);
+            Assert.DoesNotContain(expectedStringToBeFound, contentAfterChange, StringComparison.OrdinalIgnoreCase);
+
+            TaskerAgentService service = mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
+            await service.UpdateRepetitiveTasks().ConfigureAwait(false);
+
+            string contentAfterUpdate = await File.ReadAllTextAsync(specificDayDatabase).ConfigureAwait(false);
+            Assert.Contains(expectedStringToBeFound, contentAfterUpdate, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]

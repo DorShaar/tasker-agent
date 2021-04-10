@@ -145,8 +145,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
         private void UpdateCurrentTaskIfNeeded(IRepetitiveMeasureableTask currentTask,
             IRepetitiveMeasureableTask taskToUpdateAccordingly)
         {
-            if (currentTask.OccurrenceDays != taskToUpdateAccordingly.OccurrenceDays ||
-                currentTask.MeasureType != taskToUpdateAccordingly.MeasureType)
+            if (IsTaskShouldBeUpdated(currentTask, taskToUpdateAccordingly))
             {
                 currentTask.Expected = taskToUpdateAccordingly.Expected;
                 currentTask.MeasureType = taskToUpdateAccordingly.MeasureType;
@@ -157,6 +156,13 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             {
                 UpdateCurrentMonthlyTaskIfNeeded(currentMonthlyTask, monthlyTaskToUpdateAccordingly);
             }
+        }
+
+        private bool IsTaskShouldBeUpdated(IRepetitiveMeasureableTask currentTask,
+            IRepetitiveMeasureableTask taskToUpdateAccordingly)
+        {
+            return currentTask.Expected != taskToUpdateAccordingly.Expected ||
+                currentTask.MeasureType != taskToUpdateAccordingly.MeasureType;
         }
 
         private void UpdateCurrentMonthlyTaskIfNeeded(MonthlyRepetitiveMeasureableTask currentTask,
