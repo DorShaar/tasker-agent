@@ -35,6 +35,7 @@ namespace TaskerAgantTests.Infra.Services
             IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
             configuration.CurrentValue.DatabaseDirectoryPath = DatabaseTestFilesPath;
             configuration.CurrentValue.InputFilePath = mInputFileName;
+            configuration.CurrentValue.DaysToKeepForward = 8;
             mServiceCollection.AddSingleton(configuration);
 
             TaskerAgentService service = mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
