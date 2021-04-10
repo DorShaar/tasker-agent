@@ -25,7 +25,7 @@ namespace TaskerAgent.Infra.Services.Email
         private const string TaskerAgentLable = "Label_2783741690411084443";
         private const string UnreadMessageLable = "UNREAD";
 
-        private readonly string[] mScopes = new[] { "https://mail.google.com/", };
+        private readonly string[] mScopes = new[] { GmailService.ScopeConstants.MailGoogleCom };
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
         private readonly ILogger<EmailService> mLogger;
 
@@ -58,7 +58,6 @@ namespace TaskerAgent.Infra.Services.Email
             };
 
             mSmtpClient = new SmtpClient();
-            mIsConnected = true;
 
             mLogger.LogInformation($"Connected to smtp server {StmpGmailAddress}");
 
@@ -69,6 +68,8 @@ namespace TaskerAgent.Infra.Services.Email
             });
 
             mLogger.LogInformation("Connected to Gmail service");
+
+            mIsConnected = true;
         }
 
         private async Task<UserCredential> GetUserCredential()
