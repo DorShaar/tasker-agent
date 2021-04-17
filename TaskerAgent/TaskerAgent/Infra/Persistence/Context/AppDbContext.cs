@@ -74,6 +74,18 @@ namespace TaskerAgent.Infra.Persistence.Context
             }
         }
 
+        private async Task LoadNextIdToProduce()
+        {
+            if (!File.Exists(NextIdPath))
+            {
+                mLogger.LogError($"Database file {NextIdPath} does not exists");
+                throw new FileNotFoundException("Database does not exists", NextIdPath);
+            }
+
+            mLogger.LogDebug("Going to load next id");
+            mIdProducer.SetNextID(await mSerializer.Deserialize<int>(NextIdPath).ConfigureAwait(false));
+        }
+
         public async Task<ITasksGroup> FindAsync(string entityToFind)
         {
             string databasePath = GetDatabasePath(entityToFind);
@@ -89,19 +101,7 @@ namespace TaskerAgent.Infra.Persistence.Context
                 .ConfigureAwait(false);
         }
 
-        private async Task LoadNextIdToProduce()
-        {
-            if (!File.Exists(NextIdPath))
-            {
-                mLogger.LogError($"Database file {NextIdPath} does not exists");
-                throw new FileNotFoundException("Database does not exists", NextIdPath);
-            }
-
-            mLogger.LogDebug("Going to load next id");
-            mIdProducer.SetNextID(await mSerializer.Deserialize<int>(NextIdPath).ConfigureAwait(false));
-        }
-
-        public async Task SaveCurrentDatabase(ITasksGroup newGroup)
+        public async Task AddToDatabase(ITasksGroup newGroup)
         {
             string databasePath = GetDatabasePath(newGroup.Name);
 
@@ -126,6 +126,37 @@ namespace TaskerAgent.Infra.Persistence.Context
             {
                 mLogger.LogError(ex, $"Unable to serialize database in {mConfiguration.CurrentValue.DatabaseDirectoryPath}");
             }
+        }
+
+        /// <summary>
+        /// Should be called when group is updated and has no deleted or new tasks.
+        /// </summary>
+        public async Task UpdateGroupWithoutNewTasks(ITasksGroup newGroup)
+        {
+            string databasePath = GetDatabasePath(newGroup.Name);
+
+            if (string.IsNullOrEmpty(databasePath))
+            {
+                mLogger.LogError("No database path was given");
+                return;
+            }
+
+            try
+            {
+                await SaveTasksGroups(newGroup, databasePath).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                mLogger.LogError(ex, $"Unable to serialize database in {mConfiguration.CurrentValue.DatabaseDirectoryPath}");
+            }
+        }
+
+        /// <summary>
+        /// Should be called when group is updated and has deleted or new tasks.
+        /// </summary>
+        public async Task UpdateGroupWithNewTasks(ITasksGroup newGroup)
+        {
+            await AddToDatabase(newGroup).ConfigureAwait(false);
         }
 
         private string GetDatabasePath(string groupName)

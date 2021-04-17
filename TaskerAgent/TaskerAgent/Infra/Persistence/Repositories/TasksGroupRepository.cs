@@ -21,13 +21,15 @@ namespace TaskerAgent.Infra.Persistence.Repositories
 
         public async Task<bool> AddAsync(ITasksGroup newGroup)
         {
+            await mDatabase.LoadDatabase().ConfigureAwait(false);
+
             if (await mDatabase.FindAsync(newGroup.Name).ConfigureAwait(false) != null)
             {
                 mLogger.LogError($"Group name: {newGroup.Name} is already found in database");
                 return false;
             }
 
-            await mDatabase.SaveCurrentDatabase(newGroup).ConfigureAwait(false);
+            await mDatabase.AddToDatabase(newGroup).ConfigureAwait(false);
             return true;
         }
 
@@ -46,9 +48,37 @@ namespace TaskerAgent.Infra.Persistence.Repositories
 
         public async Task<bool> AddOrUpdateAsync(ITasksGroup newGroup)
         {
-            mLogger.LogDebug($"Updating {newGroup.Name}");
+            await mDatabase.LoadDatabase().ConfigureAwait(false);
 
-            await mDatabase.SaveCurrentDatabase(newGroup).ConfigureAwait(false);
+            ITasksGroup currentTaskGroup = await mDatabase.FindAsync(newGroup.Name).ConfigureAwait(false);
+
+            if (currentTaskGroup == null)
+            {
+                mLogger.LogInformation($"Found group {newGroup.Name} in database. Adding it");
+                await mDatabase.AddToDatabase(newGroup).ConfigureAwait(false);
+                return true;
+            }
+
+            mLogger.LogDebug($"Found group {newGroup.Name} in database. Checking if should be updated");
+
+            TasksGroupDelta tasksGroupDelta = currentTaskGroup.Compare(newGroup);
+            if (tasksGroupDelta.AreIdentical())
+            {
+                mLogger.LogDebug($"Group {newGroup.Name} was not changed. Nothing to update");
+                return false;
+            }
+
+            if (tasksGroupDelta.HasSameTasks())
+            {
+                mLogger.LogInformation($"Updating group {newGroup.Name}. Change is in tasks values");
+                await mDatabase.UpdateGroupWithoutNewTasks(newGroup).ConfigureAwait(false);
+            }
+            else
+            {
+                mLogger.LogInformation($"Updating group {newGroup.Name}. Tasks were deleted or adde");
+                await mDatabase.UpdateGroupWithNewTasks(newGroup).ConfigureAwait(false);
+            }
+
             return true;
         }
 
