@@ -161,7 +161,10 @@ namespace TaskerAgent.Infra.Services
             ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(dateString).ConfigureAwait(false);
 
             if (tasksGroup == null)
+            {
                 mLogger.LogError($"Could not find task group {dateString}. Could not generate report");
+                return;
+            }
 
             string dailySummaryReport = mSummaryReporter.CreateDailySummaryReport(tasksGroup);
             await mEmailService.SendMessage("Daily Summary Report", dailySummaryReport).ConfigureAwait(false);

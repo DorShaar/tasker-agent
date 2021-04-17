@@ -15,7 +15,6 @@ namespace TaskerAgent.Infra.Services.AgentTiming
         private bool mDisposed;
 
         private const string LastDateUserReportedFeedbackFileName = "last_date_user_reported_feedback";
-        private const int DailySummaryTime = 7;
         private const DayOfWeek WeeklySummaryTime = DayOfWeek.Sunday;
 
         private bool mWasResetOnMidnightAlreadyPerformed;
@@ -83,7 +82,7 @@ namespace TaskerAgent.Infra.Services.AgentTiming
 
         public bool ShouldSendDailySummary(DateTime dateTime)
         {
-            return !mWasDailySummarySent && dateTime.Hour == DailySummaryTime;
+            return !mWasDailySummarySent && dateTime.Hour == mOptions.CurrentValue.TimeToNotify;
         }
 
         public void SignalDailySummaryPerformed()
@@ -93,7 +92,9 @@ namespace TaskerAgent.Infra.Services.AgentTiming
 
         public bool ShouldSendWeeklySummary(DateTime dateTime)
         {
-            return !mWasWeeklySummarySent && dateTime.Hour == DailySummaryTime && dateTime.DayOfWeek == WeeklySummaryTime;
+            return !mWasWeeklySummarySent &&
+                dateTime.Hour == mOptions.CurrentValue.TimeToNotify &&
+                dateTime.DayOfWeek == WeeklySummaryTime;
         }
 
         public void SignalWeeklySummaryPerformed()
