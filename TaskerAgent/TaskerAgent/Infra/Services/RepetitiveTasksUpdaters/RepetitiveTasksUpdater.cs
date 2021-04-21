@@ -206,19 +206,19 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             if (taskToUpdateAccordingly is DailyRepetitiveMeasureableTask dailyTask)
             {
                 return mTasksProducerFactory.CreateDailyProducer(
-                    dailyTask.Frequency, dailyTask.MeasureType, dailyTask.Expected, score: 1);
+                    dailyTask.MeasureType, dailyTask.Expected, score: 1);
             }
 
             if (taskToUpdateAccordingly is WeeklyRepetitiveMeasureableTask weeklyTask)
             {
                 return mTasksProducerFactory.CreateWeeklyProducer(
-                    weeklyTask.Frequency, weeklyTask.MeasureType, weeklyTask.OccurrenceDays, weeklyTask.Expected, score: 1);
+                    weeklyTask.MeasureType, weeklyTask.OccurrenceDays, weeklyTask.Expected, score: 1);
             }
 
             if (taskToUpdateAccordingly is MonthlyRepetitiveMeasureableTask monthlyTask)
             {
                 return mTasksProducerFactory.CreateMonthlyProducer(
-                    monthlyTask.Frequency, monthlyTask.MeasureType, monthlyTask.DaysOfMonth, monthlyTask.Expected, score: 1);
+                    monthlyTask.MeasureType, monthlyTask.DaysOfMonth, monthlyTask.Expected, score: 1);
             }
 
             return null;
