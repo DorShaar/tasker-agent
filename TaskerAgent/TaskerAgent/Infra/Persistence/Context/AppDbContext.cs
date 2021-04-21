@@ -16,6 +16,8 @@ namespace TaskerAgent.Infra.Persistence.Context
 {
     public class AppDbContext
     {
+        private const string FirstId = "1000";
+
         private readonly IObjectSerializer mSerializer;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mConfiguration;
         private readonly IIDProducer mIdProducer;
@@ -78,12 +80,17 @@ namespace TaskerAgent.Infra.Persistence.Context
         {
             if (!File.Exists(NextIdPath))
             {
-                mLogger.LogError($"Database file {NextIdPath} does not exists");
-                throw new FileNotFoundException("Database does not exists", NextIdPath);
+                mLogger.LogWarning($"Database file {NextIdPath} does not exists");
+                await CreateDatabaseNextIdFile().ConfigureAwait(false);
             }
 
             mLogger.LogDebug("Going to load next id");
             mIdProducer.SetNextID(await mSerializer.Deserialize<int>(NextIdPath).ConfigureAwait(false));
+        }
+
+        private async Task CreateDatabaseNextIdFile()
+        {
+            await File.WriteAllTextAsync(NextIdPath, FirstId).ConfigureAwait(false);
         }
 
         public async Task<ITasksGroup> FindAsync(string entityToFind)
@@ -173,7 +180,7 @@ namespace TaskerAgent.Infra.Persistence.Context
             await mSerializer.Serialize(newGroup, databasePath).ConfigureAwait(false);
         }
 
-        private async Task SaveNextId()
+        public async Task SaveNextId()
         {
             await mSerializer.Serialize(mIdProducer.PeekForNextId(), NextIdPath).ConfigureAwait(false);
         }
