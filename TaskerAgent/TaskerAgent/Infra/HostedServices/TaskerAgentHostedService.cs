@@ -22,7 +22,7 @@ namespace TaskerAgent.Infra.HostedServices
         private readonly ILogger<TaskerAgentHostedService> mLogger;
 
         private bool mDisposed;
-        private readonly SemaphoreSlim mSemaphore = new SemaphoreSlim(0, 1);
+        private readonly SemaphoreSlim mSemaphore = new SemaphoreSlim(1, 1);
         private Timer mNotifierTimer;
 
         public TaskerAgentHostedService(TaskerAgentService taskerAgentService,
@@ -63,6 +63,8 @@ namespace TaskerAgent.Infra.HostedServices
                 await SendTodaysFutureTasksReport().ConfigureAwait(false);
                 await SendWeeklySummary(elapsedEventArgs).ConfigureAwait(false);
                 await CheckForUserUpdates().ConfigureAwait(false);
+
+                mSemaphore.Release();
             }
         }
 
@@ -84,14 +86,14 @@ namespace TaskerAgent.Infra.HostedServices
             if (mAgentTimingService.ShouldSendDailySummary(elapsedEventArgs.SignalTime))
             {
                 if (await mTaskerAgentService.SendDailySummary(elapsedEventArgs.SignalTime).ConfigureAwait(false))
-                    mAgentTimingService.DailySummarySentTimingHandler.SetOn(elapsedEventArgs.SignalTime.Date);
+                    mAgentTimingService.DailySummarySentTimingHandler.SetDone(elapsedEventArgs.SignalTime.Date);
 
                 foreach (DateTime date in mAgentTimingService.DailySummarySentTimingHandler.GetMissingeDatesUserRecievedSummaryMail())
                 {
                     mLogger.LogInformation($"Sending delayed daily summary for {date.ToString(TimeConsts.TimeFormat)}");
 
                     if (await mTaskerAgentService.SendDailySummary(date).ConfigureAwait(false))
-                        mAgentTimingService.DailySummarySentTimingHandler.SetOn(date);
+                        mAgentTimingService.DailySummarySentTimingHandler.SetDone(date);
                 }
             }
             else
@@ -153,7 +155,10 @@ namespace TaskerAgent.Infra.HostedServices
                 return;
 
             if (disposing)
+            {
                 mNotifierTimer?.Dispose();
+                mAgentTimingService.Dispose();
+            }
 
             mDisposed = true;
         }

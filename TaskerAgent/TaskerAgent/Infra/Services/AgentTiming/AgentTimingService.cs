@@ -69,7 +69,7 @@ namespace TaskerAgent.Infra.Services.AgentTiming
                 if (!mWasResetOnMidnightAlreadyPerformed)
                 {
                     UpdateTasksFromInputFileHandler.SetNotDone();
-                    DailySummarySentTimingHandler.SetOff();
+                    DailySummarySentTimingHandler.SetNotDone();
                     WeeklySummarySentHandler.SetNotDone();
 
                     mWasResetOnMidnightAlreadyPerformed = true;

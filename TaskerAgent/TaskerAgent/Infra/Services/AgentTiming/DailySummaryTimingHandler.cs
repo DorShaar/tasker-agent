@@ -20,13 +20,13 @@ namespace TaskerAgent.Infra.Services.AgentTiming
 
         private bool mDisposed;
 
-        protected bool mStatus;
+        protected bool mIsOperationDone;
 
         public bool Value
         {
             get
             {
-                return mStatus;
+                return mIsOperationDone;
             }
         }
 
@@ -59,20 +59,20 @@ namespace TaskerAgent.Infra.Services.AgentTiming
             }
         }
 
-        public void SetOn(DateTime date)
+        public void SetDone(DateTime date)
         {
-            mStatus = true;
+            mIsOperationDone = true;
             mMissingeDatesUserRecievedSummaryMail.Remove(date);
         }
 
-        public void SetOff()
+        public void SetNotDone()
         {
-            mStatus = false;
+            mIsOperationDone = false;
         }
 
         public bool ShouldSendDailySummary(DateTime dateTime)
         {
-            if (mStatus)
+            if (mIsOperationDone)
                 return false;
 
             if (dateTime.Hour == mOptions.CurrentValue.TimeToNotify)
@@ -83,7 +83,9 @@ namespace TaskerAgent.Infra.Services.AgentTiming
 
         public IEnumerable<DateTime> GetMissingeDatesUserRecievedSummaryMail()
         {
-            return mMissingeDatesUserRecievedSummaryMail;
+            DateTime[] dateTimes = new DateTime[mMissingeDatesUserRecievedSummaryMail.Count];
+            mMissingeDatesUserRecievedSummaryMail.CopyTo(dateTimes);
+            return dateTimes;
         }
 
         public void Dispose()
