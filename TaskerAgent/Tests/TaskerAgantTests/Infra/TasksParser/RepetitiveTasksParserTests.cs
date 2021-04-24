@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
@@ -17,6 +18,9 @@ namespace TaskerAgantTests.Infra.TasksParser
 {
     public class RepetitiveTasksParserTests
     {
+        private const string TestFilesDirectory = "TestFiles";
+
+        private readonly string mInputFileName = Path.Combine(TestFilesDirectory, "repetitive_tasks.txt");
         private readonly ServiceProvider mServiceProvider;
 
         public RepetitiveTasksParserTests()
@@ -31,8 +35,10 @@ namespace TaskerAgantTests.Infra.TasksParser
         {
             ITasksGroupFactory groupsFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
             ITasksGroup group = groupsFactory.CreateGroup("test").Value;
+
             IOptionsMonitor<TaskerAgentConfiguration> configuration =
                 mServiceProvider.GetRequiredService<IOptionsMonitor<TaskerAgentConfiguration>>();
+            configuration.CurrentValue.InputFilePath = mInputFileName;
 
             RepetitiveTasksParser parser = new RepetitiveTasksParser(
                 groupsFactory, new TasksProducerFactory(), configuration, NullLogger<RepetitiveTasksParser>.Instance);
@@ -63,7 +69,7 @@ namespace TaskerAgantTests.Infra.TasksParser
 
             Assert.Equal("Sleep hours", repetitiveMeasureableTask4.Description);
 
-            Assert.Equal(22, repetitiveMeasureableTask5.DaysOfMonth[0]);
+            Assert.Equal(15, repetitiveMeasureableTask5.DaysOfMonth[0]);
 
             Assert.Equal(Days.Wednesday | Days.Friday, repetitiveMeasureableTask6.OccurrenceDays);
         }

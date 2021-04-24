@@ -30,11 +30,11 @@ namespace TaskerAgantTests.Infra.Context
 
             ITasksProducerFactory tasksProducerFactory = mServiceProvider.GetRequiredService<ITasksProducerFactory>();
             IWorkTaskProducer dailyTaskProducer = tasksProducerFactory.CreateDailyProducer(
-                Frequency.Daily, MeasureType.Liter, 3, 1);
+                MeasureType.Liter, 3, 1);
             IWorkTaskProducer weeklyTaskProducer = tasksProducerFactory.CreateWeeklyProducer(
-                Frequency.Weekly, MeasureType.Liter, Days.Friday, 3, 1);
+                MeasureType.Liter, Days.Friday, 3, 1);
             IWorkTaskProducer monthlyTaskProducer = tasksProducerFactory.CreateMonthlyProducer(
-                Frequency.Monthly, MeasureType.Liter, new List<int> { 1 }, 3, 1);
+                MeasureType.Liter, new List<int> { 1 }, 3, 1);
 
             ITasksGroupFactory taskGroupFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
 
@@ -44,7 +44,7 @@ namespace TaskerAgantTests.Infra.Context
             string weeklyTaskID = taskGroupFactory.CreateTask(group, "task2", weeklyTaskProducer).Value.ID;
             string monthlyTaskID = taskGroupFactory.CreateTask(group, "task3", monthlyTaskProducer).Value.ID;
 
-            await appDbContext.SaveCurrentDatabase(group).ConfigureAwait(false);
+            await appDbContext.AddToDatabase(group).ConfigureAwait(false);
 
             ITasksGroup groupFromDatabase = await appDbContext.FindAsync(group.Name).ConfigureAwait(false);
 

@@ -47,7 +47,7 @@ namespace TaskerAgent.Infra.Services
             mEmailService.Connect();
         }
 
-        public async Task SendTodaysTasksReport()
+        public async Task<bool> SendTodaysTasksReport()
         {
             ITasksGroup tasksGroup = await GetTasksByDate(DateTime.Now).ConfigureAwait(false);
 
@@ -56,7 +56,7 @@ namespace TaskerAgent.Infra.Services
 
             string todaysFutureTasksReport = mSummaryReporter.CreateTodaysFutureTasksReport(tasksGroup);
 
-            await mEmailService.SendMessage("Today's tasks", todaysFutureTasksReport).ConfigureAwait(false);
+            return await mEmailService.SendMessage("Today's tasks", todaysFutureTasksReport).ConfigureAwait(false);
         }
 
         public async Task SendThisWeekTasksReport()
@@ -119,7 +119,7 @@ namespace TaskerAgent.Infra.Services
             }
         }
 
-        public async Task UpdateRepetitiveTasks()
+        public async Task UpdateRepetitiveTasksFromInputFile()
         {
             mLogger.LogDebug("Updating repetitive tasks");
 

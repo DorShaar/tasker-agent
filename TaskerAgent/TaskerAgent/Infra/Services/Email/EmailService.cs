@@ -1,11 +1,11 @@
-﻿using EASendMail;
-using Google.Apis.Auth.OAuth2;
+﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Gmail.v1.Data;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MimeKit;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -20,7 +20,6 @@ namespace TaskerAgent.Infra.Services.Email
     public class EmailService : IEmailService
     {
         private const string ApplicationName = "TaskerAgent";
-        private const string StmpGmailAddress = "smtp.gmail.com";
         private const string UserId = "me";
         private const string TaskerAgentLable = "Label_2783741690411084443";
         private const string UnreadMessageLable = "UNREAD";
@@ -31,8 +30,6 @@ namespace TaskerAgent.Infra.Services.Email
 
         private bool mDisposed;
 
-        private SmtpServer mSmtpServer;
-        private SmtpClient mSmtpClient;
         private bool mIsConnected;
         private GmailService mGmailService;
 
@@ -45,22 +42,6 @@ namespace TaskerAgent.Infra.Services.Email
 
         public async Task Connect()
         {
-            string accessToken = await File.ReadAllTextAsync(
-                mTaskerAgentOptions.CurrentValue.AccessTokenPath).ConfigureAwait(false);
-
-            mSmtpServer = new SmtpServer(StmpGmailAddress)
-            {
-                ConnectType = SmtpConnectType.ConnectSSLAuto,
-                Port = 587, // Using 587 port, you can also use 465 port
-                AuthType = SmtpAuthType.XOAUTH2,
-                User = mTaskerAgentOptions.CurrentValue.EmailToNotify,
-                Password = accessToken
-            };
-
-            mSmtpClient = new SmtpClient();
-
-            mLogger.LogInformation($"Connected to smtp server {StmpGmailAddress}");
-
             mGmailService = new GmailService(new BaseClientService.Initializer()
             {
                 HttpClientInitializer = await GetUserCredential().ConfigureAwait(false),
@@ -89,31 +70,56 @@ namespace TaskerAgent.Infra.Services.Email
                 new FileDataStore(credPath, true)).ConfigureAwait(false);
         }
 
-        public Task SendMessage(string subject, string message)
+        public async Task<bool> SendMessage(string subject, string messageBody)
         {
-            if (!mIsConnected)
-                throw new InvalidOperationException("Could not send message. Please connect first");
-
             try
             {
-                SmtpMail mail = new SmtpMail("TryIt")
-                {
-                    From = mTaskerAgentOptions.CurrentValue.EmailToNotify,
-                    To = mTaskerAgentOptions.CurrentValue.EmailToNotify,
-                    Subject = subject,
-                    TextBody = message,
-                };
+                Message message = await CreateEmail(subject, messageBody).ConfigureAwait(false);
 
-                mSmtpClient.SendMail(mSmtpServer, mail);
+                await mGmailService.Users.Messages.Send(message, UserId).ExecuteAsync().ConfigureAwait(false);
 
-                mLogger.LogInformation($"Email {subject} has been submitted to server successfully!");
+                return true;
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                mLogger.LogError(ex, $"Could not send email {subject} to the server");
+                mLogger.LogError(ex, $"Could not send message {subject}");
+                return false;
             }
+        }
 
-            return Task.CompletedTask;
+        private async Task<Message> CreateEmail(string subject, string textBody)
+        {
+            MimeMessage mimeMessage = new MimeMessage
+            {
+                Subject = subject,
+            };
+
+            mimeMessage.To.Add(MailboxAddress.Parse(mTaskerAgentOptions.CurrentValue.EmailToNotify));
+            mimeMessage.From.Add(MailboxAddress.Parse(mTaskerAgentOptions.CurrentValue.EmailToNotify));
+
+            BodyBuilder bodyBuilder = new BodyBuilder
+            {
+                TextBody = textBody
+            };
+
+            mimeMessage.Body = bodyBuilder.ToMessageBody();
+
+            using MemoryStream memoryStream = new MemoryStream();
+
+            await mimeMessage.WriteToAsync(memoryStream).ConfigureAwait(false);
+
+            return new Message
+            {
+                Raw = EncodeMessage(memoryStream.ToArray())
+            };
+        }
+
+        private string EncodeMessage(byte[] messageBytes)
+        {
+            return Convert.ToBase64String(messageBytes);
+                //.Replace('+', '-')
+                //.Replace('/', '_')
+                //.Replace("=", "");
         }
 
         public async Task<IEnumerable<MessageInfo>> ReadMessages(bool shouldReadAll = false)

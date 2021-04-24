@@ -15,7 +15,7 @@ namespace TaskerAgantTests.Infra.Services.Email
         {
             IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
             configuration.CurrentValue.EmailToNotify = "dordatas@gmail.com";
-            configuration.CurrentValue.AccessTokenPath = @"C:\Dor\Projects\tasker-agent\TaskerAgent\tokens\accessToken.txt";
+            configuration.CurrentValue.CredentialsPath = @"C:\Dor\Projects\tasker-agent\TaskerAgent\tokens\client_secret_email_and_calendar.json";
 
             EmailService emailService = new EmailService(configuration, NullLogger<EmailService>.Instance);
             await emailService.Connect().ConfigureAwait(false);
@@ -27,7 +27,6 @@ namespace TaskerAgantTests.Infra.Services.Email
         {
             IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
             configuration.CurrentValue.EmailToNotify = "dordatas@gmail.com";
-            configuration.CurrentValue.AccessTokenPath = @"C:\Dor\Projects\tasker-agent\TaskerAgent\tokens\accessToken.txt";
             configuration.CurrentValue.CredentialsPath = @"C:\Dor\Projects\tasker-agent\TaskerAgent\tokens\client_secret.json";
 
             EmailService emailService = new EmailService(configuration, NullLogger<EmailService>.Instance);

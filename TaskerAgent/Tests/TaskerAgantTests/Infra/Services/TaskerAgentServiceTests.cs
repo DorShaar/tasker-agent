@@ -40,7 +40,7 @@ namespace TaskerAgantTests.Infra.Services
 
             TaskerAgentService service = mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
 
-            service.UpdateRepetitiveTasks().Wait();
+            service.UpdateRepetitiveTasksFromInputFile().Wait();
         }
 
         [Fact]
@@ -70,7 +70,7 @@ namespace TaskerAgantTests.Infra.Services
             Assert.DoesNotContain(expectedStringToBeFound, contentAfterChange, StringComparison.OrdinalIgnoreCase);
 
             TaskerAgentService service = mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
-            await service.UpdateRepetitiveTasks().ConfigureAwait(false);
+            await service.UpdateRepetitiveTasksFromInputFile().ConfigureAwait(false);
 
             string contentAfterUpdate = await File.ReadAllTextAsync(specificDayDatabase).ConfigureAwait(false);
             Assert.Contains(expectedStringToBeFound, contentAfterUpdate, StringComparison.OrdinalIgnoreCase);

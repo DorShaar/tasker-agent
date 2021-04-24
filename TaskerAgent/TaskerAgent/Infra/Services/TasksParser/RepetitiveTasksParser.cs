@@ -139,19 +139,19 @@ namespace TaskerAgent.Infra.Services.TasksParser
             if (parseComponents.Frequency == Frequency.Daily)
             {
                 return mTasksProducerFactory.CreateDailyProducer(
-                    parseComponents.Frequency, parseComponents.MeasureType, parseComponents.Expected, score: 1);
+                    parseComponents.MeasureType, parseComponents.Expected, score: 1);
             }
 
             if (parseComponents.Frequency == Frequency.Weekly)
             {
                 return mTasksProducerFactory.CreateWeeklyProducer(
-                    parseComponents.Frequency, parseComponents.MeasureType, parseComponents.OccurrenceDays, parseComponents.Expected, score: 1);
+                    parseComponents.MeasureType, parseComponents.OccurrenceDays, parseComponents.Expected, score: 1);
             }
 
             if (parseComponents.Frequency == Frequency.Monthly)
             {
                 return mTasksProducerFactory.CreateMonthlyProducer(
-                    parseComponents.Frequency, parseComponents.MeasureType, parseComponents.DaysOfMonth, parseComponents.Expected, score: 1);
+                    parseComponents.MeasureType, parseComponents.DaysOfMonth, parseComponents.Expected, score: 1);
             }
 
             return null;

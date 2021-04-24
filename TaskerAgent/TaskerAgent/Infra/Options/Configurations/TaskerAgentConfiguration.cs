@@ -10,7 +10,6 @@ namespace TaskerAgent.Infra.Options.Configurations
         public int TimeToNotify { get; set; } = 8;
         public int DaysToKeepForward { get; set; } = 40;
         public string EmailToNotify { get; set; }
-        public string AccessTokenPath { get; set; }
         public string CredentialsPath { get; set; }
     }
 }
