@@ -2,23 +2,23 @@
 {
     public class AgentServiceHandler
     {
-        protected bool mStatus;
+        protected bool mIsOperationAlreadyDone;
 
-        public void SetOn()
+        public void SetDone()
         {
-            mStatus = true;
+            mIsOperationAlreadyDone = true;
         }
 
-        public void SetOff()
+        public void SetNotDone()
         {
-            mStatus = false;
+            mIsOperationAlreadyDone = false;
         }
 
-        public bool Value
+        public bool ShouldDo
         {
             get
             {
-                return mStatus;
+                return !mIsOperationAlreadyDone;
             }
         }
     }

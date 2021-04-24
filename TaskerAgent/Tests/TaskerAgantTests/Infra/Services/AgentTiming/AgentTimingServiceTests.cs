@@ -45,7 +45,7 @@ namespace TaskerAgantTests.Infra.Services.AgentTiming
                 };
 
                 using (AgentTimingService agentTimingService =
-                    new AgentTimingService(configuration, NullLogger<AgentTimingService>.Instance))
+                    new AgentTimingService(configuration, NullLoggerFactory.Instance))
                 {
                     agentTimingService.SignalDatesGivenFeedbackByUser(dateTimesGivenFeedback);
                 }
@@ -53,7 +53,6 @@ namespace TaskerAgantTests.Infra.Services.AgentTiming
                 string[] dateTimesStrings = await File.ReadAllLinesAsync(databasePath).ConfigureAwait(false);
                 Assert.Equal(dateTimesStrings[0], dateTimesInDatabase[1].ToString(TimeConsts.TimeFormat));
                 Assert.Equal(dateTimesStrings[1], dateTimesInDatabase[2].ToString(TimeConsts.TimeFormat));
-                Assert.Equal(dateTimesStrings[2], DateTime.Today.AddDays(1).ToString(TimeConsts.TimeFormat));
             }
             finally
             {

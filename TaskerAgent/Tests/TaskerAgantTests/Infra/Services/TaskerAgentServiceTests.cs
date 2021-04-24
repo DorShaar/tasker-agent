@@ -85,7 +85,7 @@ namespace TaskerAgantTests.Infra.Services
             ServiceProvider serviceProvider = mServiceCollection.BuildServiceProvider();
             TaskerAgentService service = serviceProvider.GetRequiredService<TaskerAgentService>();
 
-            await service.SendTodaysTasksReport().ConfigureAwait(false);
+            await service.SendTodaysFutureTasksReport().ConfigureAwait(false);
 
             A.CallTo(() => emailService.SendMessage(
                 A<string>.Ignored,
@@ -111,7 +111,7 @@ namespace TaskerAgantTests.Infra.Services
             A.CallTo(() => emailService.SendMessage(A<string>.Ignored, A<string>.Ignored))
                 .Invokes(fakeObjectCall => thisWeekReport = fakeObjectCall.Arguments.Get<string>(1));
 
-            await service.SendThisWeekTasksReport().ConfigureAwait(false);
+            await service.SendThisWeekFutureTasksReport().ConfigureAwait(false);
 
             string[] splittedReport = thisWeekReport.Split("Drink Water");
             Assert.True(splittedReport.Length == 8);

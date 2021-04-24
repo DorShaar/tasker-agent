@@ -9,18 +9,20 @@ using System.Timers;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services;
 using TaskerAgent.Infra.Services.AgentTiming;
+using Triangle.Time;
 using Timer = System.Timers.Timer;
 
 namespace TaskerAgent.Infra.HostedServices
 {
     internal class TaskerAgentHostedService : IHostedService, IDisposable, IAsyncDisposable
     {
-        private readonly ILogger<TaskerAgentHostedService> mLogger;
-
-        private bool mDisposed;
         private readonly TaskerAgentService mTaskerAgentService;
         private readonly AgentTimingService mAgentTimingService;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerOptions;
+        private readonly ILogger<TaskerAgentHostedService> mLogger;
+
+        private bool mDisposed;
+        private readonly SemaphoreSlim mSemaphore = new SemaphoreSlim(0, 1);
         private Timer mNotifierTimer;
 
         public TaskerAgentHostedService(TaskerAgentService taskerAgentService,
@@ -52,20 +54,24 @@ namespace TaskerAgent.Infra.HostedServices
 
         private async void PerformAgentActions(object sender, ElapsedEventArgs elapsedEventArgs)
         {
-            mAgentTimingService.ResetOnMidnight(elapsedEventArgs.SignalTime);
+            if (await mSemaphore.WaitAsync(TimeSpan.FromMinutes(2)).ConfigureAwait(false))
+            {
+                mAgentTimingService.ResetOnMidnight(elapsedEventArgs.SignalTime);
 
-            await UpdateTaskFromInputFile(elapsedEventArgs).ConfigureAwait(false);
-            await SendDailySummary(elapsedEventArgs).ConfigureAwait(false);
-            await SendWeeklySummary(elapsedEventArgs).ConfigureAwait(false);
-            await CheckForUserUpdates().ConfigureAwait(false);
+                await UpdateTaskFromInputFile(elapsedEventArgs).ConfigureAwait(false);
+                await SendDailySummary(elapsedEventArgs).ConfigureAwait(false);
+                await SendTodaysFutureTasksReport().ConfigureAwait(false);
+                await SendWeeklySummary(elapsedEventArgs).ConfigureAwait(false);
+                await CheckForUserUpdates().ConfigureAwait(false);
+            }
         }
 
         private async Task UpdateTaskFromInputFile(ElapsedEventArgs elapsedEventArgs)
         {
-            if (!mAgentTimingService.UpdateTasksFromInputFileHadnler.Value)
+            if (mAgentTimingService.UpdateTasksFromInputFileHandler.ShouldDo)
             {
                 await mTaskerAgentService.UpdateRepetitiveTasksFromInputFile().ConfigureAwait(false);
-                mAgentTimingService.UpdateTasksFromInputFileHadnler.SetOn();
+                mAgentTimingService.UpdateTasksFromInputFileHandler.SetDone();
             }
             else
             {
@@ -77,13 +83,29 @@ namespace TaskerAgent.Infra.HostedServices
         {
             if (mAgentTimingService.ShouldSendDailySummary(elapsedEventArgs.SignalTime))
             {
-                await mTaskerAgentService.SendDailySummary(elapsedEventArgs.SignalTime).ConfigureAwait(false);
-                if (await mTaskerAgentService.SendTodaysTasksReport().ConfigureAwait(false))
-                    mAgentTimingService.DailySummarySentHandler.SetOn();
+                if (await mTaskerAgentService.SendDailySummary(elapsedEventArgs.SignalTime).ConfigureAwait(false))
+                    mAgentTimingService.DailySummarySentTimingHandler.SetOn(elapsedEventArgs.SignalTime.Date);
+
+                foreach (DateTime date in mAgentTimingService.DailySummarySentTimingHandler.GetMissingeDatesUserRecievedSummaryMail())
+                {
+                    mLogger.LogInformation($"Sending delayed daily summary for {date.ToString(TimeConsts.TimeFormat)}");
+
+                    if (await mTaskerAgentService.SendDailySummary(date).ConfigureAwait(false))
+                        mAgentTimingService.DailySummarySentTimingHandler.SetOn(date);
+                }
             }
             else
             {
                 mLogger.LogDebug($"Should not send daily summary yet {elapsedEventArgs.SignalTime.TimeOfDay}");
+            }
+        }
+
+        private async Task SendTodaysFutureTasksReport()
+        {
+            if (mAgentTimingService.TodaysFutureReportHandler.ShouldDo &&
+                await mTaskerAgentService.SendTodaysFutureTasksReport().ConfigureAwait(false))
+            {
+                mAgentTimingService.TodaysFutureReportHandler.SetDone();
             }
         }
 
@@ -92,8 +114,8 @@ namespace TaskerAgent.Infra.HostedServices
             if (mAgentTimingService.ShouldSendWeeklySummary(elapsedEventArgs.SignalTime))
             {
                 await mTaskerAgentService.SendWeeklySummary(elapsedEventArgs.SignalTime).ConfigureAwait(false);
-                await mTaskerAgentService.SendThisWeekTasksReport().ConfigureAwait(false);
-                mAgentTimingService.WeeklySummarySentHandler.SetOn();
+                await mTaskerAgentService.SendThisWeekFutureTasksReport().ConfigureAwait(false);
+                mAgentTimingService.WeeklySummarySentHandler.SetDone();
             }
             else
             {

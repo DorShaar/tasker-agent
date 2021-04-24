@@ -47,7 +47,7 @@ namespace TaskerAgent.Infra.Services
             mEmailService.Connect();
         }
 
-        public async Task<bool> SendTodaysTasksReport()
+        public async Task<bool> SendTodaysFutureTasksReport()
         {
             ITasksGroup tasksGroup = await GetTasksByDate(DateTime.Now).ConfigureAwait(false);
 
@@ -59,7 +59,7 @@ namespace TaskerAgent.Infra.Services
             return await mEmailService.SendMessage("Today's tasks", todaysFutureTasksReport).ConfigureAwait(false);
         }
 
-        public async Task SendThisWeekTasksReport()
+        public async Task<bool> SendThisWeekFutureTasksReport()
         {
             IEnumerable<ITasksGroup> thisWeekGroup = await GetThisWeekGroups().ConfigureAwait(false);
 
@@ -68,7 +68,7 @@ namespace TaskerAgent.Infra.Services
 
             string thisWeekFutureTasksReport = mSummaryReporter.CreateThisWeekFutureTasksReport(thisWeekGroup);
 
-            await mEmailService.SendMessage("Today's tasks", thisWeekFutureTasksReport).ConfigureAwait(false);
+            return await mEmailService.SendMessage("Today's tasks", thisWeekFutureTasksReport).ConfigureAwait(false);
         }
 
         private async Task<IEnumerable<ITasksGroup>> GetThisWeekGroups()
@@ -152,9 +152,9 @@ namespace TaskerAgent.Infra.Services
         /// Reports tasks progress for the day of the given date.
         /// </summary>
         /// <param name="date"></param>
-        public async Task SendDailySummary(DateTime date)
+        public async Task<bool> SendDailySummary(DateTime date)
         {
-            mLogger.LogInformation("Sending daily summary");
+            mLogger.LogInformation($"Sending daily summary for {date.ToString(TimeConsts.TimeFormat)}");
 
             string dateString = date.ToString(TimeConsts.TimeFormat);
 
@@ -163,17 +163,17 @@ namespace TaskerAgent.Infra.Services
             if (tasksGroup == null)
             {
                 mLogger.LogError($"Could not find task group {dateString}. Could not generate report");
-                return;
+                return false;
             }
 
             string dailySummaryReport = mSummaryReporter.CreateDailySummaryReport(tasksGroup);
-            await mEmailService.SendMessage("Daily Summary Report", dailySummaryReport).ConfigureAwait(false);
+            return await mEmailService.SendMessage("Daily Summary Report", dailySummaryReport).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Reports tasks progress for the week of the given date.
         /// </summary>
-        public async Task SendWeeklySummary(DateTime dateOfTheWeek)
+        public async Task<bool> SendWeeklySummary(DateTime dateOfTheWeek)
         {
             mLogger.LogInformation("Sending weekly summary");
 
@@ -195,7 +195,7 @@ namespace TaskerAgent.Infra.Services
             }
 
             string weeklySummaryReport =  mSummaryReporter.CreateWeeklySummaryReport(weeklyGroups);
-            await mEmailService.SendMessage("Weekly Summary Report", weeklySummaryReport).ConfigureAwait(false);
+            return await mEmailService.SendMessage("Weekly Summary Report", weeklySummaryReport).ConfigureAwait(false);
         }
 
         public async Task<IEnumerable<DateTime>> CheckForUpdates()
