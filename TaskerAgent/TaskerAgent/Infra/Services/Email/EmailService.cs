@@ -118,9 +118,6 @@ namespace TaskerAgent.Infra.Services.Email
         private string EncodeMessage(byte[] messageBytes)
         {
             return Convert.ToBase64String(messageBytes);
-            //.Replace('+', '-')
-            //.Replace('/', '_')
-            //.Replace("=", "");
         }
 
         public async Task<IEnumerable<MessageInfo>> ReadMessages(bool shouldReadAll = false)
