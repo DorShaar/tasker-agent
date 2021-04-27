@@ -9,6 +9,7 @@ using MimeKit;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using TaskerAgent.App.Services.Email;
@@ -80,7 +81,7 @@ namespace TaskerAgent.Infra.Services.Email
 
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 mLogger.LogError(ex, $"Could not send message {subject}");
                 return false;
@@ -117,9 +118,9 @@ namespace TaskerAgent.Infra.Services.Email
         private string EncodeMessage(byte[] messageBytes)
         {
             return Convert.ToBase64String(messageBytes);
-                //.Replace('+', '-')
-                //.Replace('/', '_')
-                //.Replace("=", "");
+            //.Replace('+', '-')
+            //.Replace('/', '_')
+            //.Replace("=", "");
         }
 
         public async Task<IEnumerable<MessageInfo>> ReadMessages(bool shouldReadAll = false)
@@ -132,31 +133,39 @@ namespace TaskerAgent.Infra.Services.Email
             var messagesListRequest = mGmailService.Users.Messages.List(UserId);
             messagesListRequest.LabelIds = BuildLabels(shouldReadAll);
 
-            ListMessagesResponse listMessagesResponse = await messagesListRequest.ExecuteAsync().ConfigureAwait(false);
-
-            if (listMessagesResponse.Messages == null)
-                return messages;
-
-            foreach (Message message in listMessagesResponse.Messages)
+            try
             {
-                var messageGetRequest = mGmailService.Users.Messages.Get(UserId, message.Id);
-                var messageResponse = await messageGetRequest.ExecuteAsync().ConfigureAwait(false);
+                ListMessagesResponse listMessagesResponse = await messagesListRequest.ExecuteAsync().ConfigureAwait(false);
 
-                DateTime dateCreated = DateTimeOffset.FromUnixTimeMilliseconds(message.InternalDate.Value).DateTime;
+                if (listMessagesResponse.Messages == null)
+                    return messages;
 
-                if (messageResponse.Payload.Body.Data != null)
+                foreach (Message message in listMessagesResponse.Messages)
                 {
-                    messages.Add(
-                        new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Body.Data), dateCreated));
+                    var messageGetRequest = mGmailService.Users.Messages.Get(UserId, message.Id);
+                    var messageResponse = await messageGetRequest.ExecuteAsync().ConfigureAwait(false);
+
+                    DateTime dateCreated = DateTimeOffset.FromUnixTimeMilliseconds(message.InternalDate.Value).DateTime;
+
+                    if (messageResponse.Payload.Body.Data != null)
+                    {
+                        messages.Add(
+                            new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Body.Data), dateCreated));
+                    }
+                    else
+                    {
+                        messages.Add(
+                            new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Parts[0].Body.Data), dateCreated));
+                    }
                 }
-                else
-                {
-                    messages.Add(
-                        new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Parts[0].Body.Data), dateCreated));
-                }
+
+                return messages;
             }
-
-            return messages;
+            catch (HttpRequestException ex)
+            {
+                mLogger.LogError(ex, "Could not read messages");
+                return Array.Empty<MessageInfo>();
+            }
         }
 
         private List<string> BuildLabels(bool shouldReadAll)
