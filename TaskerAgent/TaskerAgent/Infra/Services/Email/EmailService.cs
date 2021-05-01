@@ -139,21 +139,7 @@ namespace TaskerAgent.Infra.Services.Email
 
                 foreach (Message message in listMessagesResponse.Messages)
                 {
-                    var messageGetRequest = mGmailService.Users.Messages.Get(UserId, message.Id);
-                    var messageResponse = await messageGetRequest.ExecuteAsync().ConfigureAwait(false);
-
-                    DateTime dateCreated = DateTimeOffset.FromUnixTimeMilliseconds(message.InternalDate.Value).DateTime;
-
-                    if (messageResponse.Payload.Body.Data != null)
-                    {
-                        messages.Add(
-                            new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Body.Data), dateCreated));
-                    }
-                    else
-                    {
-                        messages.Add(
-                            new MessageInfo(message.Id, ConvertFromBase64(messageResponse.Payload.Parts[0].Body.Data), dateCreated));
-                    }
+                    messages.Add(await GetMessageInfo(message).ConfigureAwait(false));
                 }
 
                 return messages;
@@ -175,6 +161,34 @@ namespace TaskerAgent.Infra.Services.Email
             }
 
             return labels;
+        }
+
+        private async Task<MessageInfo> GetMessageInfo(Message message)
+        {
+            var messageGetRequest = mGmailService.Users.Messages.Get(UserId, message.Id);
+            Message messageResponse = await messageGetRequest.ExecuteAsync().ConfigureAwait(false);
+
+            DateTime dateCreated = GetDateMessageCreated(messageResponse);
+
+            if (messageResponse.Payload.Body.Data != null)
+            {
+                return new MessageInfo(messageResponse.Id, ConvertFromBase64(messageResponse.Payload.Body.Data), dateCreated);
+            }
+            else
+            {
+                return new MessageInfo(messageResponse.Id, ConvertFromBase64(messageResponse.Payload.Parts[0].Body.Data), dateCreated);
+            }
+        }
+
+        private DateTime GetDateMessageCreated(Message message)
+        {
+            if (!message.InternalDate.HasValue)
+            {
+                mLogger.LogWarning($"Got message info of id {message.Id} without internal date");
+                return DateTime.Now;
+            }
+
+            return DateTimeOffset.FromUnixTimeMilliseconds(message.InternalDate.Value).DateTime;
         }
 
         private string ConvertFromBase64(string base64Text)
