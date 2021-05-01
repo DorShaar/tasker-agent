@@ -25,6 +25,9 @@ namespace TaskerAgent.Infra.Extensions
 {
     public static class DIExtensions
     {
+        private const string LogFilesDirectory = "logs";
+        private const string LogFileName = "tasker_agent.log";
+
         public static void UseDI(this IServiceCollection services)
         {
             RegisterServices(services);
@@ -68,7 +71,9 @@ namespace TaskerAgent.Infra.Extensions
         private static void RegisterLogger(IServiceCollection services)
         {
             services.AddLogging(loggerBuilder =>
-                loggerBuilder.AddConsole().SetMinimumLevel(LogLevel.Debug));
+                loggerBuilder.AddConsole().SetMinimumLevel(LogLevel.Debug)
+                .AddFile(Path.Combine(LogFilesDirectory, LogFileName), append: true)
+                );
         }
 
         private static void AddConfiguration(IServiceCollection services)

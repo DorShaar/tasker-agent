@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.Extensions.Options" Version="5.0.0" />
     <PackageReference Include="MimeKit" Version="2.11.0" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" Version="2.1.0" />
+    <PackageReference Include="NReco.Logging.File" Version="1.1.1" />
     <PackageReference Include="Tasker.ObjectSerializer.JsonService" Version="2.0.8" />
   </ItemGroup>
 
