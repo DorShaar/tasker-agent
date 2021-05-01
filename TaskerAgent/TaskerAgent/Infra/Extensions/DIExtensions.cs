@@ -46,6 +46,7 @@ namespace TaskerAgent.Infra.Extensions
             services.AddSingleton<TaskerAgentService>();
             services.AddSingleton<IRepetitiveTasksUpdater, RepetitiveTasksUpdater>();
             services.AddSingleton<RepetitiveTasksParser>();
+            services.AddSingleton<ResponseTextParser>();            
             services.AddSingleton<SummaryReporter>();
             services.AddSingleton<AgentTimingService>();
             services.AddSingleton<IEmailService, EmailService>();

@@ -88,14 +88,6 @@ namespace TaskerAgent.Infra.Services.AgentTiming
             return mMissingeDatesUserReportedAFeedback.Contains(dateTime.Date);
         }
 
-        // TODO
-        //public IEnumerable<DateTime> GetMissingeDatesUserRecievedSummaryMail()
-        //{
-        //    DateTime[] dateTimes = new DateTime[mMissingeDatesUserRecievedSummaryMail.Count];
-        //    mMissingeDatesUserRecievedSummaryMail.CopyTo(dateTimes);
-        //    return dateTimes;
-        //}
-
         public void Dispose()
         {
             Dispose(true);
