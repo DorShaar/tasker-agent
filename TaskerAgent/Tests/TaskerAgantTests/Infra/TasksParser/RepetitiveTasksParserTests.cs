@@ -26,7 +26,10 @@ namespace TaskerAgantTests.Infra.TasksParser
         public RepetitiveTasksParserTests()
         {
             IServiceCollection serviceCollection = new ServiceCollection();
+
             serviceCollection.UseDI();
+            serviceCollection.AddLogging();
+
             mServiceProvider = serviceCollection.BuildServiceProvider();
         }
 
@@ -58,10 +61,10 @@ namespace TaskerAgantTests.Infra.TasksParser
             }
 
             Assert.Equal("Drink Water", repetitiveMeasureableTask0.Description);
-            Assert.Equal(MeasureType.Liter, repetitiveMeasureableTask0.MeasureType);
+            Assert.Equal(MeasureType.Liters, repetitiveMeasureableTask0.MeasureType);
 
             Assert.Equal("Exercise", repetitiveMeasureableTask1.Description);
-            Assert.Equal(MeasureType.Occurrence, repetitiveMeasureableTask1.MeasureType);
+            Assert.Equal(MeasureType.Occurrences, repetitiveMeasureableTask1.MeasureType);
 
             Assert.Equal("Floss", repetitiveMeasureableTask2.Description);
 

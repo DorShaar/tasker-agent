@@ -31,6 +31,7 @@ namespace TaskerAgantTests.Infra.Services
         public TaskerAgentServiceTests()
         {
             mServiceCollection = new ServiceCollection();
+
             mServiceCollection.UseDI();
 
             IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
@@ -153,6 +154,10 @@ namespace TaskerAgantTests.Infra.Services
             Assert.Contains("Exercise:", report);
             Assert.Contains("Sleep hours:", report);
             Assert.Contains("Total score:", report);
+
+            Assert.Contains("Occurrences", report, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Liters", report, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Hours", report, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]

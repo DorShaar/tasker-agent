@@ -61,6 +61,8 @@ namespace TaskerAgent.Infra.Services.SummaryReporters
                 reportBuilder.Append(repititiveTask.Description)
                 .Append(". Expected: ")
                 .Append(repititiveTask.Expected)
+                .Append(" ")
+                .Append(repititiveTask.MeasureType)
                 .AppendLine(".");
             }
         }
@@ -112,6 +114,8 @@ namespace TaskerAgent.Infra.Services.SummaryReporters
                 .Append(repititiveTask.Actual)
                 .Append('/')
                 .Append(repititiveTask.Expected)
+                .Append(" ")
+                .Append(repititiveTask.MeasureType)
                 .Append(". (")
                 .Append(completePercentage)
                 .AppendLine("%)");

@@ -16,7 +16,9 @@ namespace TaskerAgantTests.Infra
         public TasksGroupExtensionsTests()
         {
             IServiceCollection serviceCollection = new ServiceCollection();
+
             serviceCollection.UseDI();
+            serviceCollection.AddLogging();
 
             mServiceProvider = serviceCollection.BuildServiceProvider();
         }
@@ -30,7 +32,7 @@ namespace TaskerAgantTests.Infra
             ITasksGroup groupA = taskGroupFactory.CreateGroup("GroupA").Value;
             ITasksGroup groupB = taskGroupFactory.CreateGroup("GroupB").Value;
 
-            IWorkTaskProducer workTaskProducer = tasksProducerFactory.CreateDailyProducer(MeasureType.Liter, 3, 2);
+            IWorkTaskProducer workTaskProducer = tasksProducerFactory.CreateDailyProducer(MeasureType.Liters, 3, 2);
             taskGroupFactory.CreateTask(groupA, "descriptionA", workTaskProducer);
             taskGroupFactory.CreateTask(groupB, "descriptionA", workTaskProducer);
 
@@ -45,7 +47,7 @@ namespace TaskerAgantTests.Infra
 
             ITasksGroup groupA = taskGroupFactory.CreateGroup("GroupA").Value;
 
-            IWorkTaskProducer workTaskProducer = tasksProducerFactory.CreateDailyProducer(MeasureType.Liter, 3, 2);
+            IWorkTaskProducer workTaskProducer = tasksProducerFactory.CreateDailyProducer(MeasureType.Liters, 3, 2);
             taskGroupFactory.CreateTask(groupA, "descriptionA", workTaskProducer);
 
             Assert.Equal(ComparisonResult.Equal, groupA.Compare(groupA));
