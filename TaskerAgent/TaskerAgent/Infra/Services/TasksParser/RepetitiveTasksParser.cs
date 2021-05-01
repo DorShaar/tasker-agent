@@ -44,50 +44,13 @@ namespace TaskerAgent.Infra.Services.TasksParser
 
         private void CreateRepetitiveTaskFromParameters(ITasksGroup taskGroup, string[] parameters)
         {
-            ParseComponents parseComponents = new ParseComponents();
-
             try
             {
                 string taskDescription = parameters[0];
 
-                if (!parseComponents.SetFrequency(parameters[1]))
-                {
-                    mLogger.LogError($"Could not set frequency for task {taskDescription}");
+                ParsedComponents parseComponents = CreatedParsedComponentes(parameters);
+                if (!parseComponents.WasParseSuccessfull)
                     return;
-                }
-
-                if (!parseComponents.SetExpected(parameters[2]))
-                {
-                    mLogger.LogError($"Could not set expected for task {taskDescription}");
-                    return;
-                }
-
-                if (!parseComponents.SetMeasureType(parameters[3]))
-                {
-                    mLogger.LogError($"Could not set measure type for task {taskDescription}");
-                    return;
-                }
-
-                if (parameters.Length > 4)
-                {
-                    if (parseComponents.Frequency == Frequency.Weekly)
-                    {
-                        if (!parseComponents.SetOccurrenceDays(parameters[4..]))
-                        {
-                            mLogger.LogError($"Could not set OccurrenceDays for task {taskDescription}");
-                            return;
-                        }
-                    }
-
-                    if (parseComponents.Frequency == Frequency.Monthly)
-                    {
-                        if (!parseComponents.SetDaysOfMonth(parameters[4..]))
-                        {
-                            mLogger.LogError($"Could not set days of month for task {taskDescription}");
-                            return;
-                        }
-                    }
-                }
 
                 IWorkTaskProducer taskProducer = GetWorkTaskProducer(parseComponents);
 
@@ -106,6 +69,59 @@ namespace TaskerAgent.Infra.Services.TasksParser
             {
                 LogError(ex, parameters);
             }
+        }
+
+        private ParsedComponents CreatedParsedComponentes(string[] parameters)
+        {
+            ParsedComponents parseComponents = new ParsedComponents();
+
+            string taskDescription = parameters[0];
+
+            if (!parseComponents.SetFrequency(parameters[1]))
+            {
+                mLogger.LogError($"Could not set frequency for task {taskDescription}");
+                parseComponents.FailParse();
+                return parseComponents;
+            }
+
+            if (!parseComponents.SetExpected(parameters[2]))
+            {
+                mLogger.LogError($"Could not set expected for task {taskDescription}");
+                parseComponents.FailParse();
+                return parseComponents;
+            }
+
+            if (!parseComponents.SetMeasureType(parameters[3]))
+            {
+                mLogger.LogError($"Could not set measure type for task {taskDescription}");
+                parseComponents.FailParse();
+                return parseComponents;
+            }
+
+            if (parameters.Length > 4)
+            {
+                if (parseComponents.Frequency == Frequency.Weekly)
+                {
+                    if (!parseComponents.SetOccurrenceDays(parameters[4..]))
+                    {
+                        mLogger.LogError($"Could not set OccurrenceDays for task {taskDescription}");
+                        parseComponents.FailParse();
+                        return parseComponents;
+                    }
+                }
+
+                if (parseComponents.Frequency == Frequency.Monthly)
+                {
+                    if (!parseComponents.SetDaysOfMonth(parameters[4..]))
+                    {
+                        mLogger.LogError($"Could not set days of month for task {taskDescription}");
+                        parseComponents.FailParse();
+                        return parseComponents;
+                    }
+                }
+            }
+
+            return parseComponents;
         }
 
         private void LogError(IndexOutOfRangeException ex, string[] parameters)
@@ -134,7 +150,7 @@ namespace TaskerAgent.Infra.Services.TasksParser
             }
         }
 
-        private IWorkTaskProducer GetWorkTaskProducer(ParseComponents parseComponents)
+        private IWorkTaskProducer GetWorkTaskProducer(ParsedComponents parseComponents)
         {
             if (parseComponents.Frequency == Frequency.Daily)
             {

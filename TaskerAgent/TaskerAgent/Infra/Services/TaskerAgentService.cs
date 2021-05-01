@@ -81,7 +81,7 @@ namespace TaskerAgent.Infra.Services
 
                 if (tasksGroup == null)
                 {
-                    mLogger.LogWarning($"Could not find task group of date {date.ToString(TimeConsts.TimeFormat)}");
+                    mLogger.LogWarning($"Could not find tasks group of date {date.ToString(TimeConsts.TimeFormat)}");
                     continue;
                 }
 
@@ -99,7 +99,7 @@ namespace TaskerAgent.Infra.Services
 
             if (tasksGroup == null)
             {
-                mLogger.LogWarning($"Could not find task group {stringDate}");
+                mLogger.LogWarning($"Could not find tasks group {stringDate}");
                 return null;
             }
 
@@ -162,7 +162,7 @@ namespace TaskerAgent.Infra.Services
 
             if (tasksGroup == null)
             {
-                mLogger.LogError($"Could not find task group {dateString}. Could not generate report");
+                mLogger.LogError($"Could not find tasks group {dateString}. Could not generate report");
                 return false;
             }
 
@@ -194,7 +194,7 @@ namespace TaskerAgent.Infra.Services
 
                 if (tasksGroup == null)
                 {
-                    mLogger.LogError($"Could not find task group {dateString}. Report may be partial");
+                    mLogger.LogError($"Could not find tasks group {dateString}. Report may be partial");
                     continue;
                 }
 

@@ -32,7 +32,7 @@ namespace TaskerAgantTests.Infra.TasksParser
         }
 
         [Fact]
-        public void Parse_AsExpected()
+        public void ParseIntoGroup_AsExpected()
         {
             ITasksGroupFactory groupsFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
             ITasksGroup group = groupsFactory.CreateGroup("test").Value;
@@ -43,7 +43,9 @@ namespace TaskerAgantTests.Infra.TasksParser
 
             RepetitiveTasksParser parser = new RepetitiveTasksParser(
                 groupsFactory, new TasksProducerFactory(), configuration, NullLogger<RepetitiveTasksParser>.Instance);
+
             parser.ParseIntoGroup(group);
+
             List<IWorkTask> repetitiveTasks = group.GetAllTasks().ToList();
 
             if (!(repetitiveTasks[0] is DailyRepetitiveMeasureableTask repetitiveMeasureableTask0)     ||
@@ -67,6 +69,7 @@ namespace TaskerAgantTests.Infra.TasksParser
             Assert.Equal("Floss", repetitiveMeasureableTask2.Description);
 
             Assert.Equal("Eat bamba", repetitiveMeasureableTask3.Description);
+            Assert.Equal(Days.Saturday, repetitiveMeasureableTask3.OccurrenceDays);
 
             Assert.Equal("Sleep hours", repetitiveMeasureableTask4.Description);
 
