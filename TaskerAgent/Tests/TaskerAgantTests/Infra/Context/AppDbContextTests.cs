@@ -20,6 +20,7 @@ namespace TaskerAgantTests.Infra.Context
         {
             IServiceCollection serviceCollection = new ServiceCollection();
             serviceCollection.UseDI();
+
             mServiceProvider = serviceCollection.BuildServiceProvider();
         }
 
@@ -30,11 +31,11 @@ namespace TaskerAgantTests.Infra.Context
 
             ITasksProducerFactory tasksProducerFactory = mServiceProvider.GetRequiredService<ITasksProducerFactory>();
             IWorkTaskProducer dailyTaskProducer = tasksProducerFactory.CreateDailyProducer(
-                MeasureType.Liter, 3, 1);
+                MeasureType.Liters, 3, 1);
             IWorkTaskProducer weeklyTaskProducer = tasksProducerFactory.CreateWeeklyProducer(
-                MeasureType.Liter, Days.Friday, 3, 1);
+                MeasureType.Liters, Days.Friday, 3, 1);
             IWorkTaskProducer monthlyTaskProducer = tasksProducerFactory.CreateMonthlyProducer(
-                MeasureType.Liter, new List<int> { 1 }, 3, 1);
+                MeasureType.Liters, new List<int> { 1 }, 3, 1);
 
             ITasksGroupFactory taskGroupFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
 

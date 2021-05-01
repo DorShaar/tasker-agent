@@ -71,17 +71,25 @@ namespace TaskerAgent.Infra.Extensions
         private static void RegisterLogger(IServiceCollection services)
         {
             services.AddLogging(loggerBuilder =>
-                loggerBuilder.AddConsole().SetMinimumLevel(LogLevel.Debug)
-                .AddFile(Path.Combine(LogFilesDirectory, LogFileName), append: true)
-                );
+                loggerBuilder.AddConsole().SetMinimumLevel(LogLevel.Debug));
+
+#if RELEASE
+             services.AddLogging(loggerBuilder =>
+                loggerBuilder.AddFile(Path.Combine(LogFilesDirectory, LogFileName), append: true));
+#endif
         }
 
         private static void AddConfiguration(IServiceCollection services)
         {
             IConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
 
+#if DEBUG
             const string configFileName = "Config.yaml";
             configurationBuilder.AddYamlFile(Path.Combine("Infra", "Options", configFileName), optional: false);
+#else
+    const string configFileName = "Config.yaml";
+            configurationBuilder.AddYamlFile(Path.Combine("Infra", "Options", configFileName), optional: false);
+#endif
 
             IConfiguration configuration = configurationBuilder.Build();
 

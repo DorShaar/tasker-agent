@@ -3,7 +3,7 @@
     public enum MeasureType
     {
         Hours = 0,
-        Liter = 1,
-        Occurrence = 2,
+        Liters = 1,
+        Occurrences = 2,
     }
 }
