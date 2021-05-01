@@ -24,6 +24,7 @@ namespace TaskerAgantTests.Infra.Services
     {
         private const string TestFilesDirectory = "TestFiles";
         private const string DatabaseTestFilesPath = "TaskerAgentDB";
+        private const string EmailFeedbackSubject = "Re: Today's tasks";
 
         private readonly string mInputFileName = Path.Combine(TestFilesDirectory, "repetitive_tasks.txt");
         private readonly IServiceCollection mServiceCollection;
@@ -181,7 +182,7 @@ namespace TaskerAgantTests.Infra.Services
         }
 
         [Fact]
-        public async Task FulfillReport_AsExpected()
+        public async Task CheckForUserFeedbacks_AsExpected()
         {
             const string message = @"Today's Tasks:
 Saturday - 03/04/2021:
@@ -196,7 +197,8 @@ Eat bamba. Expected: 2.Actual: 6
             mServiceCollection.AddSingleton(configuration);
 
             IEmailService emailService = A.Fake<IEmailService>();
-            A.CallTo(() => emailService.ReadMessages(false)).Returns(new MessageInfo[] { new MessageInfo("id", message, DateTime.Now) });
+            A.CallTo(() => emailService.ReadMessages(false))
+                .Returns(new MessageInfo[] { new MessageInfo("id", EmailFeedbackSubject, message, DateTime.Now) });
             mServiceCollection.AddSingleton(emailService);
 
             ServiceProvider serviceProvider = mServiceCollection.BuildServiceProvider();
@@ -219,7 +221,7 @@ Eat bamba. Expected: 2.Actual: 6
             GeneralRepetitiveMeasureableTask task4 = tasks[3] as GeneralRepetitiveMeasureableTask;
             Assert.True(task4.Description == "Eat bamba" && task4.Actual == 0);
 
-            await service.CheckForUpdates().ConfigureAwait(false);
+            await service.CheckForUserFeedbacks().ConfigureAwait(false);
 
             returnedTasksGroup = await realTasksGroupRepository.FindAsync("03-04-2021").ConfigureAwait(false);
 

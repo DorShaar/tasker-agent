@@ -32,7 +32,7 @@ namespace TaskerAgantTests.Infra.TasksParser
         }
 
         [Fact]
-        public void Parse_AsExpected()
+        public void ParseIntoGroup_AsExpected()
         {
             ITasksGroupFactory groupsFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
             ITasksGroup group = groupsFactory.CreateGroup("test").Value;
@@ -43,7 +43,9 @@ namespace TaskerAgantTests.Infra.TasksParser
 
             RepetitiveTasksParser parser = new RepetitiveTasksParser(
                 groupsFactory, new TasksProducerFactory(), configuration, NullLogger<RepetitiveTasksParser>.Instance);
+
             parser.ParseIntoGroup(group);
+
             List<IWorkTask> repetitiveTasks = group.GetAllTasks().ToList();
 
             if (!(repetitiveTasks[0] is DailyRepetitiveMeasureableTask repetitiveMeasureableTask0)     ||
@@ -52,7 +54,8 @@ namespace TaskerAgantTests.Infra.TasksParser
                 !(repetitiveTasks[3] is WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask3)    ||
                 !(repetitiveTasks[4] is DailyRepetitiveMeasureableTask repetitiveMeasureableTask4)     ||
                 !(repetitiveTasks[5] is MonthlyRepetitiveMeasureableTask repetitiveMeasureableTask5)   ||
-                !(repetitiveTasks[6] is WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask6))
+                !(repetitiveTasks[6] is WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask6)    ||
+                !(repetitiveTasks[8] is MonthlyRepetitiveMeasureableTask repetitiveMeasureableTask8))
             {
                 Assert.False(true);
                 return;
@@ -67,12 +70,21 @@ namespace TaskerAgantTests.Infra.TasksParser
             Assert.Equal("Floss", repetitiveMeasureableTask2.Description);
 
             Assert.Equal("Eat bamba", repetitiveMeasureableTask3.Description);
+            Assert.Equal(Days.Saturday, repetitiveMeasureableTask3.OccurrenceDays);
 
             Assert.Equal("Sleep hours", repetitiveMeasureableTask4.Description);
 
+            Assert.Equal("Plan holidays at work", repetitiveMeasureableTask5.Description);
             Assert.Equal(15, repetitiveMeasureableTask5.DaysOfMonth[0]);
 
+            Assert.Equal("Run", repetitiveMeasureableTask6.Description);
             Assert.Equal(Days.Wednesday | Days.Friday, repetitiveMeasureableTask6.OccurrenceDays);
+
+            Assert.Equal("Self study", repetitiveMeasureableTask8.Description);
+            Assert.Equal(25, repetitiveMeasureableTask8.DaysOfMonth[0]);
+            Assert.Equal(26, repetitiveMeasureableTask8.DaysOfMonth[1]);
+            Assert.Equal(27, repetitiveMeasureableTask8.DaysOfMonth[2]);
+            Assert.Equal(28, repetitiveMeasureableTask8.DaysOfMonth[3]);
         }
     }
 }

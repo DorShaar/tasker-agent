@@ -81,7 +81,7 @@ namespace TaskerAgent.Infra.Services
 
                 if (tasksGroup == null)
                 {
-                    mLogger.LogWarning($"Could not find task group of date {date.ToString(TimeConsts.TimeFormat)}");
+                    mLogger.LogWarning($"Could not find tasks group of date {date.ToString(TimeConsts.TimeFormat)}");
                     continue;
                 }
 
@@ -99,7 +99,7 @@ namespace TaskerAgent.Infra.Services
 
             if (tasksGroup == null)
             {
-                mLogger.LogWarning($"Could not find task group {stringDate}");
+                mLogger.LogWarning($"Could not find tasks group {stringDate}");
                 return null;
             }
 
@@ -162,12 +162,19 @@ namespace TaskerAgent.Infra.Services
 
             if (tasksGroup == null)
             {
-                mLogger.LogError($"Could not find task group {dateString}. Could not generate report");
+                mLogger.LogError($"Could not find tasks group {dateString}. Could not generate report");
                 return false;
             }
 
             string dailySummaryReport = mSummaryReporter.CreateDailySummaryReport(tasksGroup);
             return await mEmailService.SendMessage("Daily Summary Report", dailySummaryReport).ConfigureAwait(false);
+        }
+
+        public async Task<bool> SendMissingReportMessage(DateTime date)
+        {
+            mLogger.LogInformation($"Reporting missing summary for {date.ToString(TimeConsts.TimeFormat)}");
+            string missingDailyReportMessageAlart = mSummaryReporter.CreateMissingDailyReportMessageAlart(date);
+            return await mEmailService.SendMessage("Missing Daily Report", missingDailyReportMessageAlart).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -187,7 +194,7 @@ namespace TaskerAgent.Infra.Services
 
                 if (tasksGroup == null)
                 {
-                    mLogger.LogError($"Could not find task group {dateString}. Report may be partial");
+                    mLogger.LogError($"Could not find tasks group {dateString}. Report may be partial");
                     continue;
                 }
 
@@ -198,7 +205,7 @@ namespace TaskerAgent.Infra.Services
             return await mEmailService.SendMessage("Weekly Summary Report", weeklySummaryReport).ConfigureAwait(false);
         }
 
-        public async Task<IEnumerable<DateTime>> CheckForUpdates()
+        public async Task<IEnumerable<DateTime>> CheckForUserFeedbacks()
         {
             mLogger.LogInformation("Checking for updates");
 
@@ -210,13 +217,17 @@ namespace TaskerAgent.Infra.Services
                 return new DateTime[0];
             }
 
+            List<MessageInfo> messagesUpdateSuccessfully = new List<MessageInfo>();
             foreach(MessageInfo message in messages)
             {
-                await mRepetitiveTasksUpdater.UpdateGroupByMessage(message).ConfigureAwait(false);
-                await mEmailService.MarkMessageAsRead(message.Id).ConfigureAwait(false);
+                if (await mRepetitiveTasksUpdater.UpdateGroupByMessage(message).ConfigureAwait(false))
+                {
+                    messagesUpdateSuccessfully.Add(message);
+                    await mEmailService.MarkMessageAsRead(message.Id).ConfigureAwait(false);
+                }
             }
 
-            return messages.Select(message => message.DateCreated);
+            return messagesUpdateSuccessfully.Select(message => message.DateCreated);
         }
     }
 }

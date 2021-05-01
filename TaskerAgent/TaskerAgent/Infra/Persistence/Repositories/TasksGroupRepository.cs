@@ -75,7 +75,7 @@ namespace TaskerAgent.Infra.Persistence.Repositories
             }
             else if (comparisonResult == ComparisonResult.TasksAddedOrRemoved)
             {
-                mLogger.LogInformation($"Updating group {newGroup.Name}. Tasks were deleted or adde");
+                mLogger.LogInformation($"Updating group {newGroup.Name}. Tasks were deleted or added");
                 await mDatabase.UpdateGroupWithNewTasks(newGroup).ConfigureAwait(false);
             }
 

@@ -15,13 +15,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using TaskerAgent.App.Services.Email;
 using TaskerAgent.Domain.Email;
+using TaskerAgent.Infra.Consts;
 using TaskerAgent.Infra.Options.Configurations;
 
 namespace TaskerAgent.Infra.Services.Email
 {
     public class EmailService : IEmailService
     {
-        private const string ApplicationName = "TaskerAgent";
         private const string UserId = "me";
         private const string TaskerAgentLable = "Label_2783741690411084443";
         private const string UnreadMessageLable = "UNREAD";
@@ -47,7 +47,7 @@ namespace TaskerAgent.Infra.Services.Email
             mGmailService = new GmailService(new BaseClientService.Initializer()
             {
                 HttpClientInitializer = await GetUserCredential().ConfigureAwait(false),
-                ApplicationName = ApplicationName,
+                ApplicationName = AppConsts.ApplicationName,
             });
 
             mLogger.LogInformation("Connected to Gmail service");
@@ -169,27 +169,50 @@ namespace TaskerAgent.Infra.Services.Email
             var messageGetRequest = mGmailService.Users.Messages.Get(UserId, message.Id);
             Message messageResponse = await messageGetRequest.ExecuteAsync().ConfigureAwait(false);
 
-            DateTime dateCreated = GetDateMessageCreated(messageResponse);
-
-            if (messageResponse.Payload.Body.Data != null)
-            {
-                return new MessageInfo(messageResponse.Id, ConvertFromBase64(messageResponse.Payload.Body.Data), dateCreated);
-            }
-            else
-            {
-                return new MessageInfo(messageResponse.Id, ConvertFromBase64(messageResponse.Payload.Parts[0].Body.Data), dateCreated);
-            }
+            return CreateMessageInfoFromMessage(messageResponse);
         }
 
-        private DateTime GetDateMessageCreated(Message message)
+        private MessageInfo CreateMessageInfoFromMessage(Message message)
         {
-            if (!message.InternalDate.HasValue)
+            string messageBody = GetMessageBody(message);
+            DateTime dateCreated = GetDateMessageCreated(messageBody);
+
+            return new MessageInfo(message.Id,
+                GetSubject(message),
+                messageBody,
+                dateCreated);
+        }
+
+        private string GetMessageBody(Message message)
+        {
+            if (message.Payload.Body.Data != null)
+                return ConvertFromBase64(message.Payload.Body.Data);
+
+            return ConvertFromBase64(message.Payload.Parts[0].Body.Data);
+        }
+
+        private DateTime GetDateMessageCreated(string messageBody)
+        {
+            string lineWithDate = messageBody.Split(AppConsts.EmailMessageNewLine)[1];
+            string dateString = lineWithDate.Split("- ")[1].Replace(":", string.Empty);
+            return DateTime.Parse(dateString);
+        }
+
+        private string GetSubject(Message message)
+        {
+            return GetHeader(message, "Subject");
+        }
+
+        private string GetHeader(Message message, string headerName)
+        {
+            foreach (MessagePartHeader header in message.Payload.Headers)
             {
-                mLogger.LogWarning($"Got message info of id {message.Id} without internal date");
-                return DateTime.Now;
+                if (header.Name.Equals(headerName, StringComparison.OrdinalIgnoreCase))
+                    return header.Value;
             }
 
-            return DateTimeOffset.FromUnixTimeMilliseconds(message.InternalDate.Value).DateTime;
+            mLogger.LogWarning($"Could not find the header {headerName} of message id {message.Id}");
+            return string.Empty;
         }
 
         private string ConvertFromBase64(string base64UrlText)

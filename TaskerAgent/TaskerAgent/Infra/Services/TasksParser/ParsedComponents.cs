@@ -4,13 +4,20 @@ using TaskerAgent.Domain;
 
 namespace TaskerAgent.Infra.Services.TasksParser
 {
-    public class ParseComponents
+    public class ParsedComponents
     {
+        public bool WasParseSuccessfull { get; private set; } = true;
+
         public Frequency Frequency { get; private set; }
         public MeasureType MeasureType { get; private set; }
         public int Expected { get; private set; }
         public Days OccurrenceDays { get; private set; }
         public List<int> DaysOfMonth { get; private set; }
+
+        public void FailParse()
+        {
+            WasParseSuccessfull = false;
+        }
 
         public bool SetFrequency(string frequencyString)
         {
@@ -43,6 +50,9 @@ namespace TaskerAgent.Infra.Services.TasksParser
         {
             DaysOfMonth = new List<int>();
 
+            if (daysStrings.Length == 1 && string.IsNullOrWhiteSpace(daysStrings[0]))
+                return true;
+
             foreach (string dayString in daysStrings)
             {
                 if (!int.TryParse(dayString, out int day))
@@ -56,6 +66,9 @@ namespace TaskerAgent.Infra.Services.TasksParser
 
         public bool SetOccurrenceDays(string[] daysStrings)
         {
+            if (daysStrings.Length == 1 && string.IsNullOrWhiteSpace(daysStrings[0]))
+                return true;
+
             foreach (string dayString in daysStrings)
             {
                 if (!Enum.TryParse(dayString, ignoreCase: true, out Days day))

@@ -12,9 +12,9 @@ namespace TaskerAgent.Infra.Services.AgentTiming
 {
     public class DailySummaryTimingHandler : IDisposable, IAsyncDisposable
     {
-        private const string MissingDatesUserRecievedSummaryMailFileName = "missing_dates_user_recieved_summary_email";
+        private const string MissingDatesUserReportedFeedbackFileName = "missing_dates_user_reported_feedback";
 
-        private readonly HashSet<DateTime> mMissingeDatesUserRecievedSummaryMail = new HashSet<DateTime>();
+        private readonly HashSet<DateTime> mMissingeDatesUserReportedAFeedback = new HashSet<DateTime>();
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mOptions;
         private readonly ILogger<DailySummaryTimingHandler> mLogger;
 
@@ -46,23 +46,25 @@ namespace TaskerAgent.Infra.Services.AgentTiming
                 {
                     if (!DateTime.TryParse(dateLine, out DateTime time))
                     {
-                        mLogger.LogError($"Could not parse {dateLine} as date time from {MissingDatesUserRecievedSummaryMailFileName}");
+                        mLogger.LogError($"Could not parse {dateLine} as date time from {MissingDatesUserReportedFeedbackFileName}");
                         continue;
                     }
 
-                    mMissingeDatesUserRecievedSummaryMail.Add(time);
+                    mMissingeDatesUserReportedAFeedback.Add(time);
                 }
+
+                mMissingeDatesUserReportedAFeedback.Add(DateTime.Now);
             }
             catch (Exception)
             {
-                mLogger.LogWarning($"Could not read {MissingDatesUserRecievedSummaryMailFileName} properly");
+                mLogger.LogError($"Could not read {MissingDatesUserReportedFeedbackFileName} properly");
             }
         }
 
         public void SetDone(DateTime date)
         {
             mIsOperationDone = true;
-            mMissingeDatesUserRecievedSummaryMail.Remove(date);
+            mMissingeDatesUserReportedAFeedback.Remove(date.Date);
         }
 
         public void SetNotDone()
@@ -70,7 +72,7 @@ namespace TaskerAgent.Infra.Services.AgentTiming
             mIsOperationDone = false;
         }
 
-        public bool ShouldSendDailySummary(DateTime dateTime)
+        public bool ShouldCheckIfDailySummaryWasSent(DateTime dateTime)
         {
             if (mIsOperationDone)
                 return false;
@@ -78,15 +80,21 @@ namespace TaskerAgent.Infra.Services.AgentTiming
             if (dateTime.Hour == mOptions.CurrentValue.TimeToNotify)
                 return true;
 
-            return mMissingeDatesUserRecievedSummaryMail.Count > 0;
+            return dateTime.Date != DateTime.Now.Date && IsContainMissingDate(dateTime.Date);
         }
 
-        public IEnumerable<DateTime> GetMissingeDatesUserRecievedSummaryMail()
+        public bool IsContainMissingDate(DateTime dateTime)
         {
-            DateTime[] dateTimes = new DateTime[mMissingeDatesUserRecievedSummaryMail.Count];
-            mMissingeDatesUserRecievedSummaryMail.CopyTo(dateTimes);
-            return dateTimes;
+            return mMissingeDatesUserReportedAFeedback.Contains(dateTime.Date);
         }
+
+        // TODO
+        //public IEnumerable<DateTime> GetMissingeDatesUserRecievedSummaryMail()
+        //{
+        //    DateTime[] dateTimes = new DateTime[mMissingeDatesUserRecievedSummaryMail.Count];
+        //    mMissingeDatesUserRecievedSummaryMail.CopyTo(dateTimes);
+        //    return dateTimes;
+        //}
 
         public void Dispose()
         {
@@ -120,7 +128,7 @@ namespace TaskerAgent.Infra.Services.AgentTiming
             StringBuilder stringBuilder = new StringBuilder();
             try
             {
-                foreach (DateTime datetime in mMissingeDatesUserRecievedSummaryMail)
+                foreach (DateTime datetime in mMissingeDatesUserReportedAFeedback)
                 {
                     stringBuilder.AppendLine(datetime.ToString(TimeConsts.TimeFormat));
                 }
@@ -128,17 +136,17 @@ namespace TaskerAgent.Infra.Services.AgentTiming
                 await File.WriteAllTextAsync(
                     GetMissingRecievedEmailDatesFilePath(), stringBuilder.ToString().Trim()).ConfigureAwait(false);
 
-                mLogger.LogInformation($"Updated missing recieved emails from {MissingDatesUserRecievedSummaryMailFileName}");
+                mLogger.LogInformation($"Updated missing user's feedback reports at {MissingDatesUserReportedFeedbackFileName}");
             }
             catch (Exception)
             {
-                mLogger.LogWarning($"Could not write {MissingDatesUserRecievedSummaryMailFileName} properly");
+                mLogger.LogWarning($"Could not write {MissingDatesUserReportedFeedbackFileName} properly");
             }
         }
 
         private string GetMissingRecievedEmailDatesFilePath()
         {
-            return Path.Combine(mOptions.CurrentValue.DatabaseDirectoryPath, MissingDatesUserRecievedSummaryMailFileName);
+            return Path.Combine(mOptions.CurrentValue.DatabaseDirectoryPath, MissingDatesUserReportedFeedbackFileName);
         }
     }
 }

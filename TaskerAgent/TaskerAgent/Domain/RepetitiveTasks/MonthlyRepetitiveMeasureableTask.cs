@@ -20,9 +20,9 @@ namespace TaskerAgent.Domain.RepetitiveTasks
             int expected,
             int score) : base(id, description, frequency, measureType, expected, score)
         {
-            if (daysOfMonth == null)
+            if (daysOfMonth == null || daysOfMonth.Count == 0)
             {
-                DaysOfMonth.Add(DefaultDayInMonth);
+                AddDefaultDaysOfMonth(expected);
                 return;
             }
 
@@ -35,6 +35,15 @@ namespace TaskerAgent.Domain.RepetitiveTasks
                     continue;
 
                 DaysOfMonth.Add(dayOfMonth);
+            }
+        }
+
+        private void AddDefaultDaysOfMonth(int expected)
+        {
+            while (expected > 0)
+            {
+                DaysOfMonth.Add(DefaultDayInMonth - expected + 1);
+                expected--;
             }
         }
 

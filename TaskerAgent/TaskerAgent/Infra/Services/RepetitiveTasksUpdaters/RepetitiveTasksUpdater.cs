@@ -14,6 +14,7 @@ using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain.Email;
 using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksClusters;
+using TaskerAgent.Infra.Consts;
 using TaskerAgent.Infra.Options.Configurations;
 using Triangle.Time;
 
@@ -21,7 +22,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
 {
     public class RepetitiveTasksUpdater : IRepetitiveTasksUpdater
     {
-        private const string EmailMessageNewLine = "\r\n";
+        private const string EmailFeedbackSubject = "Re: Today's tasks";
 
         private readonly IDbRepository<ITasksGroup> mTasksGroupRepository;
         private readonly ITasksGroupFactory mTaskGroupFactory;
@@ -224,49 +225,64 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             return null;
         }
 
-        public async Task UpdateGroupByMessage(MessageInfo message)
+        public async Task<bool> UpdateGroupByMessage(MessageInfo message)
         {
             try
             {
-                string[] stringTasks = message.Body.Split(EmailMessageNewLine);
+                if (!message.Subject.Equals(EmailFeedbackSubject, StringComparison.OrdinalIgnoreCase))
+                {
+                    mLogger.LogDebug("That message is not user's feedback");
+                    return false;
+                }
+
+                string[] stringTasks = message.Body.Split(AppConsts.EmailMessageNewLine);
                 string date = stringTasks[1].Split("- ")[1].Replace(":", string.Empty);
                 ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(date).ConfigureAwait(false);
 
                 if (tasksGroup == null)
                 {
                     mLogger.LogError("Failed to update according to given message");
-                    return;
+                    return false;
                 }
 
                 IEnumerable<IWorkTask> tasks = tasksGroup.GetAllTasks();
                 foreach (string messagePart in stringTasks.Skip(2))
                 {
-                    if (string.IsNullOrWhiteSpace(messagePart))
-                        continue;
-
-                    string[] subMessageParts = messagePart.Split(".");
-                    string description = subMessageParts[0];
-                    IWorkTask task = tasks.FirstOrDefault(task => task.Description.Equals(description, StringComparison.OrdinalIgnoreCase));
-
-                    if (task == null || !(task is GeneralRepetitiveMeasureableTask repetitiveMeasureableTask))
-                    {
-                        mLogger.LogWarning($"Could not find task {description}");
-                        continue;
-                    }
-
-                    string actualString = subMessageParts[2]
-                        .Replace(".", string.Empty)
-                        .Replace("actual:", string.Empty, StringComparison.OrdinalIgnoreCase)
-                        .Trim();
-                    repetitiveMeasureableTask.Actual = Convert.ToInt32(actualString);
+                    UpdateTask(tasks, messagePart);
                 }
 
                 await mTasksGroupRepository.AddOrUpdateAsync(tasksGroup).ConfigureAwait(false);
+
+                return true;
             }
             catch (Exception ex)
             {
                 mLogger.LogError(ex, $"Could not update tasks by message id {message.Id}");
+                return false;
             }
+        }
+
+        private void UpdateTask(IEnumerable<IWorkTask> tasks, string messagePart)
+        {
+            if (string.IsNullOrWhiteSpace(messagePart))
+                return;
+
+            string[] subMessageParts = messagePart.Split(".");
+            string description = subMessageParts[0];
+            IWorkTask task = tasks.FirstOrDefault(task => task.Description.Equals(description, StringComparison.OrdinalIgnoreCase));
+
+            if (task == null || !(task is GeneralRepetitiveMeasureableTask repetitiveMeasureableTask))
+            {
+                mLogger.LogWarning($"Could not find task {description}");
+                return;
+            }
+
+            string actualString = subMessageParts[2]
+                .Replace(".", string.Empty)
+                .Replace("actual:", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Trim();
+
+            repetitiveMeasureableTask.Actual = Convert.ToInt32(actualString);
         }
     }
 }

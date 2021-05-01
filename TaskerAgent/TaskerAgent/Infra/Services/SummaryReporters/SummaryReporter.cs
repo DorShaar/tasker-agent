@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,15 +7,22 @@ using System.Text;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskerAgent.Domain.RepetitiveTasks;
+using TaskerAgent.Infra.Options.Configurations;
+using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services.SummaryReporters
 {
     public class SummaryReporter
     {
+        private readonly string mUserName;
         private readonly ILogger<SummaryReporter> mLogger;
 
-        public SummaryReporter(ILogger<SummaryReporter> logger)
+        public SummaryReporter(IOptionsMonitor<TaskerAgentConfiguration> configuration, ILogger<SummaryReporter> logger)
         {
+            if (configuration == null)
+                throw new ArgumentNullException(nameof(configuration));
+
+            mUserName = configuration.CurrentValue.UserName;
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -74,6 +82,19 @@ namespace TaskerAgent.Infra.Services.SummaryReporters
             reportBuilder.AppendLine("Daily Summary Report:");
 
             BuildReportForDay(reportBuilder, tasksGroup);
+
+            return reportBuilder.ToString();
+        }
+
+        public string CreateMissingDailyReportMessageAlart(DateTime date)
+        {
+            StringBuilder reportBuilder = new StringBuilder();
+
+            reportBuilder.Append("Hi ").Append(mUserName).AppendLine(",").AppendLine();
+
+            reportBuilder.Append("I have noticed no report was sent for date ").AppendLine(date.ToString(TimeConsts.TimeFormat));
+
+            reportBuilder.AppendLine("Please fulfill the report so we can evaluate your progress. Thanks!");
 
             return reportBuilder.ToString();
         }

@@ -36,7 +36,14 @@ namespace TaskerAgent.Domain.RepetitiveTasks
         {
             Frequency = frequency;
             MeasureType = measureType;
+
+            if (expected < 1)
+                throw new ArgumentException($"{nameof(expected)} must be positive integer number");
+
             Expected = expected;
+
+            if (score < 1)
+                throw new ArgumentException($"{nameof(score)} must be positive integer number");
             Score = score;
         }
 
