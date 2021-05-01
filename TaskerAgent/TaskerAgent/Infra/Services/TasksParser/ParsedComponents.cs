@@ -50,6 +50,9 @@ namespace TaskerAgent.Infra.Services.TasksParser
         {
             DaysOfMonth = new List<int>();
 
+            if (daysStrings.Length == 1 && string.IsNullOrWhiteSpace(daysStrings[0]))
+                return true;
+
             foreach (string dayString in daysStrings)
             {
                 if (!int.TryParse(dayString, out int day))
