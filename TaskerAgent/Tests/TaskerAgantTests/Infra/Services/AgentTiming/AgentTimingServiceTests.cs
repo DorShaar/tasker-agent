@@ -39,15 +39,10 @@ namespace TaskerAgantTests.Infra.Services.AgentTiming
 
                 await PrepareTextFileWithDates(databasePath, dateTimesInDatabase).ConfigureAwait(false);
 
-                List<DateTime> dateTimesGivenFeedback = new List<DateTime>
-                {
-                    DateTime.Parse("12/05/21"),
-                };
-
                 using (AgentTimingService agentTimingService =
                     new AgentTimingService(configuration, NullLoggerFactory.Instance))
                 {
-                    agentTimingService.SignalDatesGivenFeedbackByUser(dateTimesGivenFeedback);
+                    agentTimingService.SignalDateGivenFeedbackByUser(DateTime.Parse("12/05/21"));
                 }
 
                 string[] dateTimesStrings = await File.ReadAllLinesAsync(databasePath).ConfigureAwait(false);

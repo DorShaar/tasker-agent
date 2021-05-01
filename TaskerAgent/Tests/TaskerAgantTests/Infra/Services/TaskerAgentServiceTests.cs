@@ -181,7 +181,7 @@ namespace TaskerAgantTests.Infra.Services
         }
 
         [Fact]
-        public async Task FulfillReport_AsExpected()
+        public async Task CheckForUserFeedbacks_AsExpected()
         {
             const string message = @"Today's Tasks:
 Saturday - 03/04/2021:
@@ -219,7 +219,7 @@ Eat bamba. Expected: 2.Actual: 6
             GeneralRepetitiveMeasureableTask task4 = tasks[3] as GeneralRepetitiveMeasureableTask;
             Assert.True(task4.Description == "Eat bamba" && task4.Actual == 0);
 
-            await service.CheckForUpdates().ConfigureAwait(false);
+            await service.CheckForUserFeedbacks().ConfigureAwait(false);
 
             returnedTasksGroup = await realTasksGroupRepository.FindAsync("03-04-2021").ConfigureAwait(false);
 

@@ -170,6 +170,13 @@ namespace TaskerAgent.Infra.Services
             return await mEmailService.SendMessage("Daily Summary Report", dailySummaryReport).ConfigureAwait(false);
         }
 
+        public async Task<bool> SendMissingReportMessage(DateTime date)
+        {
+            mLogger.LogInformation($"Reporting missing summary for {date.ToString(TimeConsts.TimeFormat)}");
+            string missingDailyReportMessageAlart = mSummaryReporter.CreateMissingDailyReportMessageAlart(date);
+            return await mEmailService.SendMessage("Missing Daily Report", missingDailyReportMessageAlart).ConfigureAwait(false);
+        }
+
         /// <summary>
         /// Reports tasks progress for the week of the given date.
         /// </summary>
@@ -198,7 +205,7 @@ namespace TaskerAgent.Infra.Services
             return await mEmailService.SendMessage("Weekly Summary Report", weeklySummaryReport).ConfigureAwait(false);
         }
 
-        public async Task<IEnumerable<DateTime>> CheckForUpdates()
+        public async Task<IEnumerable<DateTime>> CheckForUserFeedbacks()
         {
             mLogger.LogInformation("Checking for updates");
 

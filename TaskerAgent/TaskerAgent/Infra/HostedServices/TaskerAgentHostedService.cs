@@ -9,7 +9,6 @@ using System.Timers;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services;
 using TaskerAgent.Infra.Services.AgentTiming;
-using Triangle.Time;
 using Timer = System.Timers.Timer;
 
 namespace TaskerAgent.Infra.HostedServices
@@ -59,10 +58,13 @@ namespace TaskerAgent.Infra.HostedServices
                 mAgentTimingService.ResetOnMidnight(elapsedEventArgs.SignalTime);
 
                 await UpdateTaskFromInputFile(elapsedEventArgs).ConfigureAwait(false);
-                await SendDailySummary(elapsedEventArgs).ConfigureAwait(false);
+
+                await CheckForUserDailyReportsAndSendSummaries().ConfigureAwait(false);
+
+                await CheckForMissingDailyReport(elapsedEventArgs).ConfigureAwait(false);
+
                 await SendTodaysFutureTasksReport().ConfigureAwait(false);
                 await SendWeeklySummary(elapsedEventArgs).ConfigureAwait(false);
-                await CheckForUserUpdates().ConfigureAwait(false);
 
                 mSemaphore.Release();
             }
@@ -81,24 +83,21 @@ namespace TaskerAgent.Infra.HostedServices
             }
         }
 
-        private async Task SendDailySummary(ElapsedEventArgs elapsedEventArgs)
+        private async Task CheckForMissingDailyReport(ElapsedEventArgs elapsedEventArgs)
         {
-            if (mAgentTimingService.ShouldSendDailySummary(elapsedEventArgs.SignalTime))
+            if (mAgentTimingService.DailySummarySentTimingHandler.ShouldCheckIfDailySummaryWasSent(elapsedEventArgs.SignalTime))
             {
-                if (await mTaskerAgentService.SendDailySummary(elapsedEventArgs.SignalTime).ConfigureAwait(false))
-                    mAgentTimingService.DailySummarySentTimingHandler.SetDone(elapsedEventArgs.SignalTime.Date);
-
-                foreach (DateTime date in mAgentTimingService.DailySummarySentTimingHandler.GetMissingeDatesUserRecievedSummaryMail())
+                if (!mAgentTimingService.DailySummarySentTimingHandler.IsContainMissingDate(elapsedEventArgs.SignalTime))
                 {
-                    mLogger.LogInformation($"Sending delayed daily summary for {date.ToString(TimeConsts.TimeFormat)}");
-
-                    if (await mTaskerAgentService.SendDailySummary(date).ConfigureAwait(false))
-                        mAgentTimingService.DailySummarySentTimingHandler.SetDone(date);
+                    mLogger.LogDebug($"Date {elapsedEventArgs.SignalTime.Date} was already reported back");
+                    return;
                 }
+
+                await mTaskerAgentService.SendMissingReportMessage(elapsedEventArgs.SignalTime).ConfigureAwait(false);
             }
             else
             {
-                mLogger.LogDebug($"Should not send daily summary yet {elapsedEventArgs.SignalTime.TimeOfDay}");
+                mLogger.LogDebug($"Should not check if daily summary was sent yet {elapsedEventArgs.SignalTime.Date}");
             }
         }
 
@@ -125,12 +124,18 @@ namespace TaskerAgent.Infra.HostedServices
             }
         }
 
-        private async Task CheckForUserUpdates()
+        private async Task CheckForUserDailyReportsAndSendSummaries()
         {
             IEnumerable<DateTime> datesGivenFeedbackByUser =
-                await mTaskerAgentService.CheckForUpdates().ConfigureAwait(false);
+                await mTaskerAgentService.CheckForUserFeedbacks().ConfigureAwait(false);
 
-            mAgentTimingService.SignalDatesGivenFeedbackByUser(datesGivenFeedbackByUser);
+            foreach (DateTime dateTime in datesGivenFeedbackByUser)
+            {
+                if (await mTaskerAgentService.SendDailySummary(dateTime).ConfigureAwait(false))
+                    mAgentTimingService.DailySummarySentTimingHandler.SetDone(dateTime);
+
+                mAgentTimingService.SignalDateGivenFeedbackByUser(dateTime);
+            }
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

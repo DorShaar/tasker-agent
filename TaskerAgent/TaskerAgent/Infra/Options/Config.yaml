@@ -1,3 +1,4 @@
+UserName: "Dor"
 DatabaseDirectoryPath: "C:/Dor/Apps/TaskerAgent"
 InputFilePath: "repetitive_tasks.txt"
 NotifierInterval: "00:00:20"
