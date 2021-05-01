@@ -22,8 +22,7 @@ namespace TaskerAgantTests.Infra.Services.Email
             await emailService.SendMessage("TestSubject", "test message").ConfigureAwait(false);
         }
 
-        [Fact]
-        //[Fact(Skip = "Requires real email. To be tested manually")]
+        [Fact(Skip = "Requires real email. To be tested manually")]
         public async Task ReadMessage_AsExpected()
         {
             IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();

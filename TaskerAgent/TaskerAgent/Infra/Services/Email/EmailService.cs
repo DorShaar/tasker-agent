@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using TaskerAgent.App.Services.Email;
@@ -191,10 +192,17 @@ namespace TaskerAgent.Infra.Services.Email
             return DateTimeOffset.FromUnixTimeMilliseconds(message.InternalDate.Value).DateTime;
         }
 
-        private string ConvertFromBase64(string base64Text)
+        private string ConvertFromBase64(string base64UrlText)
         {
+            string base64Text = base64UrlText.Replace('_', '/').Replace('-', '+');
+            switch (base64UrlText.Length % 4)
+            {
+                case 2: base64Text += "=="; break;
+                case 3: base64Text += "="; break;
+            }
+
             byte[] base64EncodedBytes = Convert.FromBase64String(base64Text);
-            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
+            return Encoding.UTF8.GetString(base64EncodedBytes);
         }
 
         public async Task MarkMessageAsRead(string messageId)
