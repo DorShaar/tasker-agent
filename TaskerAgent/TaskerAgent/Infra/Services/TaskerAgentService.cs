@@ -217,13 +217,17 @@ namespace TaskerAgent.Infra.Services
                 return new DateTime[0];
             }
 
+            List<MessageInfo> messagesUpdateSuccessfully = new List<MessageInfo>();
             foreach(MessageInfo message in messages)
             {
-                await mRepetitiveTasksUpdater.UpdateGroupByMessage(message).ConfigureAwait(false);
-                await mEmailService.MarkMessageAsRead(message.Id).ConfigureAwait(false);
+                if (await mRepetitiveTasksUpdater.UpdateGroupByMessage(message).ConfigureAwait(false))
+                {
+                    messagesUpdateSuccessfully.Add(message);
+                    await mEmailService.MarkMessageAsRead(message.Id).ConfigureAwait(false);
+                }
             }
 
-            return messages.Select(message => message.DateCreated);
+            return messagesUpdateSuccessfully.Select(message => message.DateCreated);
         }
     }
 }

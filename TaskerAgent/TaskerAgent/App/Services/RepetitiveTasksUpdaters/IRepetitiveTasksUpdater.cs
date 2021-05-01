@@ -6,7 +6,7 @@ namespace TaskerAgent.App.Services.RepetitiveTasksUpdaters
 {
     public interface IRepetitiveTasksUpdater
     {
-        Task UpdateGroupByMessage(MessageInfo message);
+        Task<bool> UpdateGroupByMessage(MessageInfo message);
         Task Update(ITasksGroup tasksGroup);
     }
 }

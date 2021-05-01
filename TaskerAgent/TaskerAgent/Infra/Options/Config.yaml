@@ -1,7 +1,7 @@
 UserName: "Dor"
 DatabaseDirectoryPath: "C:/Dor/Apps/TaskerAgent"
 InputFilePath: "repetitive_tasks.txt"
-NotifierInterval: "00:00:20"
+NotifierInterval: "00:00:05"
 TimeToNotify: 7
 DaysToKeepForward: 40
 EmailToNotify: "dordatas@gmail.com"

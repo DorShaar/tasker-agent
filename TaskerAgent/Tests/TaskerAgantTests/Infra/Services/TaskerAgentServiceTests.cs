@@ -196,7 +196,7 @@ Eat bamba. Expected: 2.Actual: 6
             mServiceCollection.AddSingleton(configuration);
 
             IEmailService emailService = A.Fake<IEmailService>();
-            A.CallTo(() => emailService.ReadMessages(false)).Returns(new MessageInfo[] { new MessageInfo("id", message, DateTime.Now) });
+            A.CallTo(() => emailService.ReadMessages(false)).Returns(new MessageInfo[] { new MessageInfo("id", "subject", message, DateTime.Now) });
             mServiceCollection.AddSingleton(emailService);
 
             ServiceProvider serviceProvider = mServiceCollection.BuildServiceProvider();
