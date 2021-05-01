@@ -26,9 +26,7 @@ namespace TaskerAgantTests.Infra.TasksParser
         public RepetitiveTasksParserTests()
         {
             IServiceCollection serviceCollection = new ServiceCollection();
-
             serviceCollection.UseDI();
-            serviceCollection.AddLogging();
 
             mServiceProvider = serviceCollection.BuildServiceProvider();
         }

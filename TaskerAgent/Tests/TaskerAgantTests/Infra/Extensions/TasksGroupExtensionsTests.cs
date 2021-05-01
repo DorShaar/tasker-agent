@@ -16,9 +16,7 @@ namespace TaskerAgantTests.Infra
         public TasksGroupExtensionsTests()
         {
             IServiceCollection serviceCollection = new ServiceCollection();
-
             serviceCollection.UseDI();
-            serviceCollection.AddLogging();
 
             mServiceProvider = serviceCollection.BuildServiceProvider();
         }
