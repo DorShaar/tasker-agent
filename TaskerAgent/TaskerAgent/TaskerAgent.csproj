@@ -1,8 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +22,7 @@
     <PackageReference Include="MimeKit" Version="2.11.0" />
     <PackageReference Include="NetEscapades.Configuration.Yaml" Version="2.1.0" />
     <PackageReference Include="NReco.Logging.File" Version="1.1.1" />
-    <PackageReference Include="Tasker.ObjectSerializer.JsonService" Version="2.0.8" />
+    <PackageReference Include="Tasker.TaskData" Version="2.0.9" />
   </ItemGroup>
 
   <ItemGroup>

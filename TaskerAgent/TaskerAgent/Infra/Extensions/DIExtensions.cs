@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ObjectSerializer.JsonService;
 using System.IO;
 using TaskData;
+using TaskData.ObjectSerializer.JsonService;
 using TaskData.TasksGroups;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.Services.Email;
