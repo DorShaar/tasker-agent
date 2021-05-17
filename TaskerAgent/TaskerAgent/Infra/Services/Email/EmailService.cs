@@ -42,7 +42,7 @@ namespace TaskerAgent.Infra.Services.Email
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task Connect()
+        public async Task<bool> Connect()
         {
             mGmailService = new GmailService(new BaseClientService.Initializer()
             {
@@ -53,6 +53,7 @@ namespace TaskerAgent.Infra.Services.Email
             mLogger.LogInformation("Connected to Gmail service");
 
             mIsConnected = true;
+            return true;
         }
 
         private async Task<UserCredential> GetUserCredential()

@@ -56,8 +56,7 @@ namespace TaskerAgent.Infra.Services
             mTaskerOptions = taskerOptions ?? throw new ArgumentNullException(nameof(taskerOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            mEmailService.Connect();
-            IsAgentReady = true;
+            IsAgentReady = mEmailService.Connect().Result;
         }
 
         public async Task<bool> SendTodaysFutureTasksReport()
@@ -194,7 +193,7 @@ namespace TaskerAgent.Infra.Services
 
                 if (tasksGroup == null)
                 {
-                    mLogger.LogInformation($"Group {tasksGroup.Name} not found");
+                    mLogger.LogInformation($"Group for date {date.ToString(TimeConsts.TimeFormat)} not found");
                     continue;
                 }
 
@@ -216,7 +215,7 @@ namespace TaskerAgent.Infra.Services
 
             if (tasksGroup == null)
             {
-                mLogger.LogError($"Group {tasksGroup.Name} not found");
+                mLogger.LogError($"Group for date {date.ToString(TimeConsts.TimeFormat)} not found");
                 return;
             }
 

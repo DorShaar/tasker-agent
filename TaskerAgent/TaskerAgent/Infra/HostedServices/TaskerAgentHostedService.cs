@@ -92,6 +92,8 @@ namespace TaskerAgent.Infra.HostedServices
                 {
                     mLogger.LogError("Could not send missing reports");
                 }
+
+                mAgentTimingService.DailySummarySentTimingHandler.SetDone();
             }
             else
             {
