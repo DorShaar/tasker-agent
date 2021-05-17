@@ -53,7 +53,8 @@ namespace TaskerAgent.Infra.HostedServices
 
         private async void PerformAgentActions(object sender, ElapsedEventArgs elapsedEventArgs)
         {
-            if (await mSemaphore.WaitAsync(TimeSpan.FromMinutes(2)).ConfigureAwait(false))
+            if (mTaskerAgentService.IsAgentReady &&
+                await mSemaphore.WaitAsync(TimeSpan.FromMinutes(2)).ConfigureAwait(false))
             {
                 mAgentTimingService.ResetOnMidnight(elapsedEventArgs.SignalTime);
 
@@ -85,15 +86,14 @@ namespace TaskerAgent.Infra.HostedServices
 
         private async Task CheckForMissingDailyReport(ElapsedEventArgs elapsedEventArgs)
         {
-            if (mAgentTimingService.DailySummarySentTimingHandler.ShouldCheckIfDailySummaryWasSent(elapsedEventArgs.SignalTime))
+            if (mAgentTimingService.DailySummarySentTimingHandler.ShouldDo)
             {
-                if (!mAgentTimingService.DailySummarySentTimingHandler.IsContainMissingDate(elapsedEventArgs.SignalTime))
+                if (!await mTaskerAgentService.SendMissingReportsMessage().ConfigureAwait(false))
                 {
-                    mLogger.LogDebug($"Date {elapsedEventArgs.SignalTime.Date} was already reported back");
-                    return;
+                    mLogger.LogError("Could not send missing reports");
                 }
 
-                await mTaskerAgentService.SendMissingReportMessage(elapsedEventArgs.SignalTime).ConfigureAwait(false);
+                mAgentTimingService.DailySummarySentTimingHandler.SetDone();
             }
             else
             {
@@ -132,9 +132,9 @@ namespace TaskerAgent.Infra.HostedServices
             foreach (DateTime dateTime in datesGivenFeedbackByUser)
             {
                 if (await mTaskerAgentService.SendDailySummary(dateTime).ConfigureAwait(false))
-                    mAgentTimingService.DailySummarySentTimingHandler.SetDone(dateTime);
+                    mAgentTimingService.DailySummarySentTimingHandler.SetDone();
 
-                mAgentTimingService.SignalDateGivenFeedbackByUser(dateTime);
+                await mTaskerAgentService.SignalDateGivenFeedbackByUser(dateTime).ConfigureAwait(false);
             }
         }
 
@@ -162,7 +162,6 @@ namespace TaskerAgent.Infra.HostedServices
             if (disposing)
             {
                 mNotifierTimer?.Dispose();
-                mAgentTimingService.Dispose();
             }
 
             mDisposed = true;

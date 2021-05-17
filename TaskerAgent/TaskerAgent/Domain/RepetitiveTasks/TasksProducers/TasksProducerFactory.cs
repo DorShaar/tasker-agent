@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using TaskData.WorkTasks;
+using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.TasksProducers;
 
 namespace TaskerAgent.Domain.RepetitiveTasks.TasksProducers

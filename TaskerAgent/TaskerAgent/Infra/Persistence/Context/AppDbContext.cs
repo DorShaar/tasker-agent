@@ -1,16 +1,17 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ObjectSerializer.JsonService;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using TaskData.IDsProducer;
+using TaskData.ObjectSerializer.JsonService;
 using TaskData.TasksGroups;
+using TaskerAgent.Domain.TaskGroup;
 using TaskerAgent.Infra.Consts;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Persistence.Context.Serialization;
-using static ObjectSerializer.JsonService.JsonSerializerWrapper;
+using static TaskData.ObjectSerializer.JsonService.JsonSerializerWrapper;
 
 namespace TaskerAgent.Infra.Persistence.Context
 {
@@ -93,7 +94,7 @@ namespace TaskerAgent.Infra.Persistence.Context
             await File.WriteAllTextAsync(NextIdPath, FirstId).ConfigureAwait(false);
         }
 
-        public async Task<ITasksGroup> FindAsync(string entityToFind)
+        public async Task<DailyTasksGroup> FindAsync(string entityToFind)
         {
             string databasePath = GetDatabasePath(entityToFind);
 
@@ -104,7 +105,7 @@ namespace TaskerAgent.Infra.Persistence.Context
             }
 
             mLogger.LogDebug($"Going to load database from {databasePath}");
-            return await mSerializer.Deserialize<ITasksGroup>(databasePath)
+            return await mSerializer.Deserialize<DailyTasksGroup>(databasePath)
                 .ConfigureAwait(false);
         }
 

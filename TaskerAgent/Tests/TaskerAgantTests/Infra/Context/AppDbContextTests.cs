@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TaskData.TasksGroups;
-using TaskData.WorkTasks;
+using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;
 using TaskerAgent.Domain.RepetitiveTasks;
@@ -15,6 +15,7 @@ namespace TaskerAgantTests.Infra.Context
     public class AppDbContextTests
     {
         private readonly ServiceProvider mServiceProvider;
+        private readonly ITasksGroupProducer mTasksGroupProducer;
 
         public AppDbContextTests()
         {
@@ -22,6 +23,7 @@ namespace TaskerAgantTests.Infra.Context
             serviceCollection.UseDI();
 
             mServiceProvider = serviceCollection.BuildServiceProvider();
+            mTasksGroupProducer = mServiceProvider.GetRequiredService<ITasksGroupProducer>();
         }
 
         [Fact]
@@ -39,7 +41,7 @@ namespace TaskerAgantTests.Infra.Context
 
             ITasksGroupFactory taskGroupFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
 
-            ITasksGroup group = taskGroupFactory.CreateGroup("test group").Value;
+            ITasksGroup group = taskGroupFactory.CreateGroup("test group", mTasksGroupProducer).Value;
 
             string dailyTaskID = taskGroupFactory.CreateTask(group, "task1", dailyTaskProducer).Value.ID;
             string weeklyTaskID = taskGroupFactory.CreateTask(group, "task2", weeklyTaskProducer).Value.ID;

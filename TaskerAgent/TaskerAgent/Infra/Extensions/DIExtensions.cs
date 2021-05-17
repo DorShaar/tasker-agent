@@ -1,15 +1,17 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ObjectSerializer.JsonService;
 using System.IO;
-using TaskData;
+using TaskData.Ioc;
+using TaskData.ObjectSerializer.JsonService;
 using TaskData.TasksGroups;
+using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.Services.Email;
 using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
+using TaskerAgent.Domain.TaskGroup;
 using TaskerAgent.Infra.HostedServices;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Persistence.Context;
@@ -53,7 +55,7 @@ namespace TaskerAgent.Infra.Extensions
 
         private static void RegisterRepositories(IServiceCollection services)
         {
-            services.AddSingleton<IDbRepository<ITasksGroup>, TasksGroupRepository>();
+            services.AddSingleton<IDbRepository<DailyTasksGroup>, TasksGroupRepository>();
         }
 
         private static void RegisterDadabases(IServiceCollection services)
@@ -66,6 +68,7 @@ namespace TaskerAgent.Infra.Extensions
             services.UseJsonObjectSerializer();
             services.UseTaskerDataEntities();
             services.AddSingleton<ITasksProducerFactory, TasksProducerFactory>();
+            services.AddSingleton<ITasksGroupProducer, DailyTasksGroupProducer>();
         }
 
         private static void RegisterLogger(IServiceCollection services)
