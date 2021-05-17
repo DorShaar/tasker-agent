@@ -56,7 +56,7 @@ namespace TaskerAgent.Infra.HostedServices
             if (mTaskerAgentService.IsAgentReady &&
                 await mSemaphore.WaitAsync(TimeSpan.FromMinutes(2)).ConfigureAwait(false))
             {
-                mAgentTimingService.ResetOnMidnight(elapsedEventArgs.SignalTime);
+                await mAgentTimingService.ResetOnMidnight(elapsedEventArgs.SignalTime).ConfigureAwait(false);
 
                 await UpdateTaskFromInputFile(elapsedEventArgs).ConfigureAwait(false);
 
