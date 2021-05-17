@@ -1,4 +1,5 @@
 ﻿using TaskData.WorkTasks;
+using TaskData.WorkTasks.Producers;
 
 namespace TaskerAgent.Domain.RepetitiveTasks.TasksProducers
 {

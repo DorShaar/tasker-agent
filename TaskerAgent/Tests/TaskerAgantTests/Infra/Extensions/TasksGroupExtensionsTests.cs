@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
+using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;
 using TaskerAgent.Domain.TaskGroup;
@@ -12,6 +13,7 @@ namespace TaskerAgantTests.Infra
     public class TasksGroupExtensionsTests
     {
         private readonly ServiceProvider mServiceProvider;
+        private readonly ITasksGroupProducer mTasksGroupProducer;
 
         public TasksGroupExtensionsTests()
         {
@@ -19,6 +21,7 @@ namespace TaskerAgantTests.Infra
             serviceCollection.UseDI();
 
             mServiceProvider = serviceCollection.BuildServiceProvider();
+            mTasksGroupProducer = mServiceProvider.GetRequiredService<ITasksGroupProducer>();
         }
 
         [Fact]
@@ -27,8 +30,8 @@ namespace TaskerAgantTests.Infra
             ITasksGroupFactory taskGroupFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
             ITasksProducerFactory tasksProducerFactory = mServiceProvider.GetRequiredService<ITasksProducerFactory>();
 
-            ITasksGroup groupA = taskGroupFactory.CreateGroup("GroupA").Value;
-            ITasksGroup groupB = taskGroupFactory.CreateGroup("GroupB").Value;
+            ITasksGroup groupA = taskGroupFactory.CreateGroup("GroupA", mTasksGroupProducer).Value;
+            ITasksGroup groupB = taskGroupFactory.CreateGroup("GroupB", mTasksGroupProducer).Value;
 
             IWorkTaskProducer workTaskProducer = tasksProducerFactory.CreateDailyProducer(MeasureType.Liters, 3, 2);
             taskGroupFactory.CreateTask(groupA, "descriptionA", workTaskProducer);
@@ -43,7 +46,7 @@ namespace TaskerAgantTests.Infra
             ITasksGroupFactory taskGroupFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
             ITasksProducerFactory tasksProducerFactory = mServiceProvider.GetRequiredService<ITasksProducerFactory>();
 
-            ITasksGroup groupA = taskGroupFactory.CreateGroup("GroupA").Value;
+            ITasksGroup groupA = taskGroupFactory.CreateGroup("GroupA", mTasksGroupProducer).Value;
 
             IWorkTaskProducer workTaskProducer = tasksProducerFactory.CreateDailyProducer(MeasureType.Liters, 3, 2);
             taskGroupFactory.CreateTask(groupA, "descriptionA", workTaskProducer);

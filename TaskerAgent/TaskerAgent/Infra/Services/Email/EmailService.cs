@@ -116,7 +116,7 @@ namespace TaskerAgent.Infra.Services.Email
             };
         }
 
-        private string EncodeMessage(byte[] messageBytes)
+        private static string EncodeMessage(byte[] messageBytes)
         {
             return Convert.ToBase64String(messageBytes);
         }
@@ -152,7 +152,7 @@ namespace TaskerAgent.Infra.Services.Email
             }
         }
 
-        private List<string> BuildLabels(bool shouldReadAll)
+        private static List<string> BuildLabels(bool shouldReadAll)
         {
             List<string> labels = new List<string>() { TaskerAgentLable };
 
@@ -183,7 +183,7 @@ namespace TaskerAgent.Infra.Services.Email
                 dateCreated);
         }
 
-        private string GetMessageBody(Message message)
+        private static string GetMessageBody(Message message)
         {
             if (message.Payload.Body.Data != null)
                 return ConvertFromBase64(message.Payload.Body.Data);
@@ -191,7 +191,7 @@ namespace TaskerAgent.Infra.Services.Email
             return ConvertFromBase64(message.Payload.Parts[0].Body.Data);
         }
 
-        private DateTime GetDateMessageCreated(string messageBody)
+        private static DateTime GetDateMessageCreated(string messageBody)
         {
             string lineWithDate = messageBody.Split(AppConsts.EmailMessageNewLine)[1];
             string dateString = lineWithDate.Split("- ")[1].Replace(":", string.Empty);
@@ -215,7 +215,7 @@ namespace TaskerAgent.Infra.Services.Email
             return string.Empty;
         }
 
-        private string ConvertFromBase64(string base64UrlText)
+        private static string ConvertFromBase64(string base64UrlText)
         {
             string base64Text = base64UrlText.Replace('_', '/').Replace('-', '+');
             switch (base64UrlText.Length % 4)

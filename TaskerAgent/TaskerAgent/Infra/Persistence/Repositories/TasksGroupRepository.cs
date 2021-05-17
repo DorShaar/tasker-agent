@@ -10,7 +10,7 @@ using TaskerAgent.Infra.Persistence.Context;
 
 namespace TaskerAgent.Infra.Persistence.Repositories
 {
-    public class TasksGroupRepository : IDbRepository<ITasksGroup>
+    public class TasksGroupRepository : IDbRepository<DailyTasksGroup>
     {
         private readonly ILogger<TasksGroupRepository> mLogger;
         private readonly AppDbContext mDatabase;
@@ -23,7 +23,7 @@ namespace TaskerAgent.Infra.Persistence.Repositories
             mDatabase.LoadDatabase().Wait();
         }
 
-        public async Task<bool> AddAsync(ITasksGroup newGroup)
+        public async Task<bool> AddAsync(DailyTasksGroup newGroup)
         {
             if (await mDatabase.FindAsync(newGroup.Name).ConfigureAwait(false) != null)
             {
@@ -43,12 +43,12 @@ namespace TaskerAgent.Infra.Persistence.Repositories
             return Task.FromResult(mDatabase.ListGroupsNames());
         }
 
-        public async Task<ITasksGroup> FindAsync(string entityToFind)
+        public async Task<DailyTasksGroup> FindAsync(string entityToFind)
         {
             return await mDatabase.FindAsync(entityToFind).ConfigureAwait(false);
         }
 
-        public async Task<bool> AddOrUpdateAsync(ITasksGroup newGroup)
+        public async Task<bool> AddOrUpdateAsync(DailyTasksGroup newGroup)
         {
             ITasksGroup currentTaskGroup = await mDatabase.FindAsync(newGroup.Name).ConfigureAwait(false);
 
@@ -82,7 +82,7 @@ namespace TaskerAgent.Infra.Persistence.Repositories
             return true;
         }
 
-        public Task RemoveAsync(ITasksGroup group)
+        public Task RemoveAsync(DailyTasksGroup group)
         {
             mLogger.LogError("Not impemented yet");
             return Task.CompletedTask;

@@ -60,7 +60,7 @@ namespace TaskerAgent.Infra.Services.SummaryReporters
 
             foreach (IWorkTask task in tasksGroup.GetAllTasks())
             {
-                if (!(task is GeneralRepetitiveMeasureableTask repititiveTask))
+                if (task is not GeneralRepetitiveMeasureableTask repititiveTask)
                 {
                     mLogger.LogError($"Task {task.ID} {task.Description} is not of type {nameof(GeneralRepetitiveMeasureableTask)}");
                     return;
@@ -69,7 +69,7 @@ namespace TaskerAgent.Infra.Services.SummaryReporters
                 reportBuilder.Append(repititiveTask.Description)
                 .Append(". Expected: ")
                 .Append(repititiveTask.Expected)
-                .Append(" ")
+                .Append(' ')
                 .Append(repititiveTask.MeasureType)
                 .AppendLine(".");
             }
@@ -86,13 +86,18 @@ namespace TaskerAgent.Infra.Services.SummaryReporters
             return reportBuilder.ToString();
         }
 
-        public string CreateMissingDailyReportMessageAlart(DateTime date)
+        public string CreateMissingDailyReportMessageAlart(IEnumerable<string> missingDatesStrings)
         {
             StringBuilder reportBuilder = new StringBuilder();
 
             reportBuilder.Append("Hi ").Append(mUserName).AppendLine(",").AppendLine();
 
-            reportBuilder.Append("I have noticed no report was sent for date ").AppendLine(date.ToString(TimeConsts.TimeFormat));
+            reportBuilder.AppendLine("I have noticed no report was sent for dates: ");
+
+            foreach(string dateString in missingDatesStrings)
+            {
+                reportBuilder.AppendLine(dateString);
+            }
 
             reportBuilder.AppendLine("Please fulfill the report so we can evaluate your progress. Thanks!");
 
@@ -122,7 +127,7 @@ namespace TaskerAgent.Infra.Services.SummaryReporters
 
             foreach (IWorkTask task in tasksGroup.GetAllTasks())
             {
-                if (!(task is GeneralRepetitiveMeasureableTask repititiveTask))
+                if (task is not GeneralRepetitiveMeasureableTask repititiveTask)
                 {
                     mLogger.LogError($"Task {task.ID} {task.Description} is not of type {nameof(GeneralRepetitiveMeasureableTask)}");
                     return;
@@ -135,7 +140,7 @@ namespace TaskerAgent.Infra.Services.SummaryReporters
                 .Append(repititiveTask.Actual)
                 .Append('/')
                 .Append(repititiveTask.Expected)
-                .Append(" ")
+                .Append(' ')
                 .Append(repititiveTask.MeasureType)
                 .Append(". (")
                 .Append(completePercentage)

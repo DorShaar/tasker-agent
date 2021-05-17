@@ -6,6 +6,7 @@ using System.IO;
 using TaskData.OperationResults;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
+using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;
 using TaskerAgent.Infra.Options.Configurations;

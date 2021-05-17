@@ -1,17 +1,21 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TaskData.OperationResults;
 using TaskData.TasksGroups;
+using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.Services.Email;
 using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.Domain.Email;
-using TaskerAgent.Infra.Extensions;
+using TaskerAgent.Domain.TaskGroup;
+using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services.SummaryReporters;
 using TaskerAgent.Infra.Services.TasksParser;
+using TaskerAgent.Infra.TaskerDateTime;
 using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services
@@ -20,31 +24,40 @@ namespace TaskerAgent.Infra.Services
     {
         private const string FromConfigGroupName = "from-config";
 
-        private readonly IDbRepository<ITasksGroup> mTasksGroupRepository;
+        private readonly IDbRepository<DailyTasksGroup> mTasksGroupRepository;
         private readonly ITasksGroupFactory mTaskGroupFactory;
+        private readonly ITasksGroupProducer mTasksGroupProducer;
         private readonly IRepetitiveTasksUpdater mRepetitiveTasksUpdater;
         private readonly IEmailService mEmailService;
         private readonly RepetitiveTasksParser mRepetitiveTasksParser;
         private readonly SummaryReporter mSummaryReporter;
+        private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerOptions;
         private readonly ILogger<TaskerAgentService> mLogger;
 
-        public TaskerAgentService(IDbRepository<ITasksGroup> TaskGroupRepository,
+        public bool IsAgentReady { get; }
+
+        public TaskerAgentService(IDbRepository<DailyTasksGroup> TaskGroupRepository,
             ITasksGroupFactory tasksGroupFactory,
+            ITasksGroupProducer tasksGroupProducer,
             IRepetitiveTasksUpdater repetitiveTasksUpdater,
             IEmailService emailService,
             RepetitiveTasksParser repetitiveTasksParser,
             SummaryReporter summaryReporter,
+            IOptionsMonitor<TaskerAgentConfiguration> taskerOptions,
             ILogger<TaskerAgentService> logger)
         {
             mTasksGroupRepository = TaskGroupRepository ?? throw new ArgumentNullException(nameof(TaskGroupRepository));
             mTaskGroupFactory = tasksGroupFactory ?? throw new ArgumentNullException(nameof(tasksGroupFactory));
+            mTasksGroupProducer = tasksGroupProducer ?? throw new ArgumentNullException(nameof(tasksGroupProducer));
             mRepetitiveTasksUpdater = repetitiveTasksUpdater ?? throw new ArgumentNullException(nameof(repetitiveTasksUpdater));
             mEmailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             mRepetitiveTasksParser = repetitiveTasksParser ?? throw new ArgumentNullException(nameof(repetitiveTasksParser));
             mSummaryReporter = summaryReporter ?? throw new ArgumentNullException(nameof(summaryReporter));
+            mTaskerOptions = taskerOptions ?? throw new ArgumentNullException(nameof(taskerOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             mEmailService.Connect();
+            IsAgentReady = true;
         }
 
         public async Task<bool> SendTodaysFutureTasksReport()
@@ -75,7 +88,7 @@ namespace TaskerAgent.Infra.Services
         {
             List<ITasksGroup> thisWeekGroups = new List<ITasksGroup>();
 
-            foreach (DateTime date in GetDatesOfWeek())
+            foreach (DateTime date in DateTimeUtilities.GetDatesOfWeek())
             {
                 ITasksGroup tasksGroup = await GetTasksByDate(date).ConfigureAwait(false);
 
@@ -106,19 +119,6 @@ namespace TaskerAgent.Infra.Services
             return tasksGroup;
         }
 
-        private IEnumerable<DateTime> GetDatesOfWeek(DateTime date = default)
-        {
-            if (date == default)
-                date = DateTime.Now;
-
-            DateTime startOfWeekDate = date.StartOfWeek();
-
-            for (int i = 0; i < 7; ++i)
-            {
-                yield return startOfWeekDate.AddDays(i);
-            }
-        }
-
         public async Task UpdateRepetitiveTasksFromInputFile()
         {
             mLogger.LogDebug("Updating repetitive tasks");
@@ -136,7 +136,7 @@ namespace TaskerAgent.Infra.Services
 
         private ITasksGroup ReadRepetitiveTasksFromInputFile()
         {
-            OperationResult<ITasksGroup> tasksFromConfigGroupCreationResult = mTaskGroupFactory.CreateGroup(FromConfigGroupName);
+            OperationResult<ITasksGroup> tasksFromConfigGroupCreationResult = mTaskGroupFactory.CreateGroup(FromConfigGroupName, mTasksGroupProducer);
             if (!tasksFromConfigGroupCreationResult.Success)
             {
                 mLogger.LogError($"Could not create group {FromConfigGroupName}");
@@ -170,11 +170,60 @@ namespace TaskerAgent.Infra.Services
             return await mEmailService.SendMessage("Daily Summary Report", dailySummaryReport).ConfigureAwait(false);
         }
 
-        public async Task<bool> SendMissingReportMessage(DateTime date)
+        /// <summary>
+        /// Go over all the previous "DaysToKeepForward" (found in configruation) and checks if already reported.
+        /// Sending one message with all the missing unreported dates.
+        /// </summary>
+        public async Task<bool> SendMissingReportsMessage()
         {
-            mLogger.LogInformation($"Reporting missing summary for {date.ToString(TimeConsts.TimeFormat)}");
-            string missingDailyReportMessageAlart = mSummaryReporter.CreateMissingDailyReportMessageAlart(date);
+            List<DailyTasksGroup> notReportedDailyTasksGroup = await GetNotReportedDailyTasksGroups().ConfigureAwait(false);
+
+            string missingDailyReportMessageAlart = mSummaryReporter.CreateMissingDailyReportMessageAlart(notReportedDailyTasksGroup.Select(group => group.Name));
             return await mEmailService.SendMessage("Missing Daily Report", missingDailyReportMessageAlart).ConfigureAwait(false);
+        }
+
+        private async Task<List<DailyTasksGroup>> GetNotReportedDailyTasksGroups()
+        {
+            List<DailyTasksGroup> notReportedDailyTasksGroup = new List<DailyTasksGroup>();
+
+            foreach (DateTime date in DateTimeUtilities.GetPreviousDaysDates(mTaskerOptions.CurrentValue.DaysToKeepForward))
+            {
+                string stringDate = date.ToString(TimeConsts.TimeFormat);
+
+                DailyTasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(stringDate).ConfigureAwait(false);
+
+                if (tasksGroup == null)
+                {
+                    mLogger.LogInformation($"Group {tasksGroup.Name} not found");
+                    continue;
+                }
+
+                if (tasksGroup?.IsAlreadyReported == false)
+                {
+                    mLogger.LogInformation($"Group {tasksGroup.Name} was not reported yet by the user");
+                    notReportedDailyTasksGroup.Add(tasksGroup);
+                }
+            }
+
+            return notReportedDailyTasksGroup;
+        }
+
+        public async Task SignalDateGivenFeedbackByUser(DateTime date)
+        {
+            string dateString = date.ToString(TimeConsts.TimeFormat);
+
+            DailyTasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(dateString).ConfigureAwait(false);
+
+            if (tasksGroup == null)
+            {
+                mLogger.LogError($"Group {tasksGroup.Name} not found");
+                return;
+            }
+
+            tasksGroup.SetReported();
+            mLogger.LogInformation($"Daily Group {tasksGroup.Name} set as reported");
+
+            await mTasksGroupRepository.AddOrUpdateAsync(tasksGroup).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -186,7 +235,7 @@ namespace TaskerAgent.Infra.Services
 
             List<ITasksGroup> weeklyGroups = new List<ITasksGroup>(7);
 
-            foreach (DateTime date in GetDatesOfWeek(dateOfTheWeek))
+            foreach (DateTime date in DateTimeUtilities.GetDatesOfWeek(dateOfTheWeek))
             {
                 string dateString = date.ToString(TimeConsts.TimeFormat);
 
@@ -201,7 +250,7 @@ namespace TaskerAgent.Infra.Services
                 weeklyGroups.Add(tasksGroup);
             }
 
-            string weeklySummaryReport =  mSummaryReporter.CreateWeeklySummaryReport(weeklyGroups);
+            string weeklySummaryReport = mSummaryReporter.CreateWeeklySummaryReport(weeklyGroups);
             return await mEmailService.SendMessage("Weekly Summary Report", weeklySummaryReport).ConfigureAwait(false);
         }
 
@@ -214,11 +263,11 @@ namespace TaskerAgent.Infra.Services
             if (messages?.Any() != true)
             {
                 mLogger.LogDebug("No new messages found. Nothing to updated");
-                return new DateTime[0];
+                return Array.Empty<DateTime>();
             }
 
             List<MessageInfo> messagesUpdateSuccessfully = new List<MessageInfo>();
-            foreach(MessageInfo message in messages)
+            foreach (MessageInfo message in messages)
             {
                 if (await mRepetitiveTasksUpdater.UpdateGroupByMessage(message).ConfigureAwait(false))
                 {

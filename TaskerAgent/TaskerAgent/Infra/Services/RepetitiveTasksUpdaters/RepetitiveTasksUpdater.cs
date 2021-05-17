@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using TaskData.OperationResults;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
+using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.RepetitiveTasks;
 using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
@@ -14,8 +15,10 @@ using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain.Email;
 using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksClusters;
+using TaskerAgent.Domain.TaskGroup;
 using TaskerAgent.Infra.Consts;
 using TaskerAgent.Infra.Options.Configurations;
+using TaskerAgent.Infra.TaskerDateTime;
 using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
@@ -24,21 +27,24 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
     {
         private const string EmailFeedbackSubject = "Re: Today's tasks";
 
-        private readonly IDbRepository<ITasksGroup> mTasksGroupRepository;
+        private readonly IDbRepository<DailyTasksGroup> mTasksGroupRepository;
         private readonly ITasksGroupFactory mTaskGroupFactory;
         private readonly ITasksProducerFactory mTasksProducerFactory;
+        private readonly ITasksGroupProducer mTasksGroupProducer;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
         private readonly ILogger<RepetitiveTasksUpdater> mLogger;
 
-        public RepetitiveTasksUpdater(IDbRepository<ITasksGroup> tasksGroupRepository,
+        public RepetitiveTasksUpdater(IDbRepository<DailyTasksGroup> tasksGroupRepository,
             ITasksGroupFactory taskGroupFactory,
             ITasksProducerFactory tasksProducerFactory,
+            ITasksGroupProducer tasksGroupProducer,
             IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
             ILogger<RepetitiveTasksUpdater> logger)
         {
             mTasksGroupRepository = tasksGroupRepository ?? throw new ArgumentNullException(nameof(tasksGroupRepository));
             mTaskGroupFactory = taskGroupFactory ?? throw new ArgumentNullException(nameof(taskGroupFactory));
             mTasksProducerFactory = tasksProducerFactory ?? throw new ArgumentNullException(nameof(tasksProducerFactory));
+            mTasksGroupProducer = tasksGroupProducer ?? throw new ArgumentNullException(nameof(tasksGroupProducer));
             mTaskerAgentOptions = taskerAgentOptions ?? throw new ArgumentNullException(nameof(taskerAgentOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -47,11 +53,11 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
         {
             TasksCluster tasksCluster = TasksCluster.SplitTaskGroupByFrequency(tasksGroupToUpdateAccordingly);
 
-            foreach (DateTime date in GetNextDaysDates(mTaskerAgentOptions.CurrentValue.DaysToKeepForward))
+            foreach (DateTime date in DateTimeUtilities.GetNextDaysDates(mTaskerAgentOptions.CurrentValue.DaysToKeepForward))
             {
                 string groupName = date.ToString(TimeConsts.TimeFormat);
 
-                ITasksGroup taskGroup =
+                DailyTasksGroup taskGroup =
                     await mTasksGroupRepository.FindAsync(groupName).ConfigureAwait(false) ??
                     await AddNewGroup(groupName).ConfigureAwait(false);
 
@@ -61,28 +67,26 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             }
         }
 
-        private IEnumerable<DateTime> GetNextDaysDates(int nextDays)
+        private async Task<DailyTasksGroup> AddNewGroup(string groupName)
         {
-            for (int i = 0; i < nextDays; ++i)
-            {
-                yield return DateTime.Now.AddDays(1 + i);
-            }
-        }
-
-        private async Task<ITasksGroup> AddNewGroup(string groupName)
-        {
-            OperationResult<ITasksGroup> taskGroupResult = mTaskGroupFactory.CreateGroup(groupName);
+            OperationResult<ITasksGroup> taskGroupResult = mTaskGroupFactory.CreateGroup(groupName, mTasksGroupProducer);
             if (!taskGroupResult.Success)
             {
                 mLogger.LogError($"Could not create group {groupName}");
                 return null;
             }
 
-            await mTasksGroupRepository.AddAsync(taskGroupResult.Value).ConfigureAwait(false);
-            return taskGroupResult.Value;
+            if (taskGroupResult.Value is not DailyTasksGroup dailyTasksGroup)
+            {
+                mLogger.LogError($"Tasks group is not of type {nameof(DailyTasksGroup)}");
+                return null;
+            }
+
+            await mTasksGroupRepository.AddAsync(dailyTasksGroup).ConfigureAwait(false);
+            return dailyTasksGroup;
         }
 
-        private async Task UpdateDailyTasks(ITasksGroup currentTaskGroup,
+        private async Task UpdateDailyTasks(DailyTasksGroup currentTaskGroup,
             IEnumerable<DailyRepetitiveMeasureableTask> tasksToUpdateAccordingly)
         {
             foreach (DailyRepetitiveMeasureableTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
@@ -93,7 +97,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             await mTasksGroupRepository.AddOrUpdateAsync(currentTaskGroup).ConfigureAwait(false);
         }
 
-        private async Task UpdateWeeklyTasks(ITasksGroup currentTaskGroup,
+        private async Task UpdateWeeklyTasks(DailyTasksGroup currentTaskGroup,
             IEnumerable<WeeklyRepetitiveMeasureableTask> tasksToUpdateAccordingly,
             DateTime date)
         {
@@ -108,7 +112,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             await mTasksGroupRepository.AddOrUpdateAsync(currentTaskGroup).ConfigureAwait(false);
         }
 
-        private async Task UpdateMonthlyTasks(ITasksGroup currentTaskGroup,
+        private async Task UpdateMonthlyTasks(DailyTasksGroup currentTaskGroup,
             IEnumerable<MonthlyRepetitiveMeasureableTask> tasksToUpdateAccordingly,
             DateTime date)
         {
@@ -129,7 +133,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
 
             foreach (IWorkTask currentTask in currentTaskGroup.GetAllTasks())
             {
-                if (!(currentTask is IRepetitiveMeasureableTask currentRepititiveTask))
+                if (currentTask is not IRepetitiveMeasureableTask currentRepititiveTask)
                     continue;
 
                 if (repititiveTaskToUpdateAccordingly.Description.Equals(currentTask.Description, StringComparison.OrdinalIgnoreCase))
@@ -159,7 +163,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             }
         }
 
-        private bool IsTaskShouldBeUpdated(IRepetitiveMeasureableTask currentTask,
+        private static bool IsTaskShouldBeUpdated(IRepetitiveMeasureableTask currentTask,
             IRepetitiveMeasureableTask taskToUpdateAccordingly)
         {
             return currentTask.Expected != taskToUpdateAccordingly.Expected ||
@@ -237,7 +241,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
 
                 string[] stringTasks = message.Body.Split(AppConsts.EmailMessageNewLine);
                 string date = stringTasks[1].Split("- ")[1].Replace(":", string.Empty);
-                ITasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(date).ConfigureAwait(false);
+                DailyTasksGroup tasksGroup = await mTasksGroupRepository.FindAsync(date).ConfigureAwait(false);
 
                 if (tasksGroup == null)
                 {
@@ -271,7 +275,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             string description = subMessageParts[0];
             IWorkTask task = tasks.FirstOrDefault(task => task.Description.Equals(description, StringComparison.OrdinalIgnoreCase));
 
-            if (task == null || !(task is GeneralRepetitiveMeasureableTask repetitiveMeasureableTask))
+            if (task == null || task is not GeneralRepetitiveMeasureableTask repetitiveMeasureableTask)
             {
                 mLogger.LogWarning($"Could not find task {description}");
                 return;

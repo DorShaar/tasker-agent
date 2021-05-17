@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
+using TaskData.WorkTasks.Producers;
 using TaskerAgent.Domain;
 using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
@@ -22,6 +23,7 @@ namespace TaskerAgantTests.Infra.TasksParser
 
         private readonly string mInputFileName = Path.Combine(TestFilesDirectory, "repetitive_tasks.txt");
         private readonly ServiceProvider mServiceProvider;
+        private readonly ITasksGroupProducer mTasksGroupProducer;
 
         public RepetitiveTasksParserTests()
         {
@@ -29,13 +31,14 @@ namespace TaskerAgantTests.Infra.TasksParser
             serviceCollection.UseDI();
 
             mServiceProvider = serviceCollection.BuildServiceProvider();
+            mTasksGroupProducer = mServiceProvider.GetRequiredService<ITasksGroupProducer>();
         }
 
         [Fact]
         public void ParseIntoGroup_AsExpected()
         {
             ITasksGroupFactory groupsFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
-            ITasksGroup group = groupsFactory.CreateGroup("test").Value;
+            ITasksGroup group = groupsFactory.CreateGroup("test", mTasksGroupProducer).Value;
 
             IOptionsMonitor<TaskerAgentConfiguration> configuration =
                 mServiceProvider.GetRequiredService<IOptionsMonitor<TaskerAgentConfiguration>>();
@@ -48,14 +51,14 @@ namespace TaskerAgantTests.Infra.TasksParser
 
             List<IWorkTask> repetitiveTasks = group.GetAllTasks().ToList();
 
-            if (!(repetitiveTasks[0] is DailyRepetitiveMeasureableTask repetitiveMeasureableTask0)     ||
-                !(repetitiveTasks[1] is DailyRepetitiveMeasureableTask repetitiveMeasureableTask1)     ||
-                !(repetitiveTasks[2] is WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask2)    ||
-                !(repetitiveTasks[3] is WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask3)    ||
-                !(repetitiveTasks[4] is DailyRepetitiveMeasureableTask repetitiveMeasureableTask4)     ||
-                !(repetitiveTasks[5] is MonthlyRepetitiveMeasureableTask repetitiveMeasureableTask5)   ||
-                !(repetitiveTasks[6] is WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask6)    ||
-                !(repetitiveTasks[8] is MonthlyRepetitiveMeasureableTask repetitiveMeasureableTask8))
+            if (repetitiveTasks[0] is not DailyRepetitiveMeasureableTask repetitiveMeasureableTask0     ||
+                repetitiveTasks[1] is not DailyRepetitiveMeasureableTask repetitiveMeasureableTask1     ||
+                repetitiveTasks[2] is not WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask2    ||
+                repetitiveTasks[3] is not WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask3    ||
+                repetitiveTasks[4] is not DailyRepetitiveMeasureableTask repetitiveMeasureableTask4     ||
+                repetitiveTasks[5] is not MonthlyRepetitiveMeasureableTask repetitiveMeasureableTask5   ||
+                repetitiveTasks[6] is not WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask6    ||
+                repetitiveTasks[8] is not MonthlyRepetitiveMeasureableTask repetitiveMeasureableTask8)
             {
                 Assert.False(true);
                 return;
