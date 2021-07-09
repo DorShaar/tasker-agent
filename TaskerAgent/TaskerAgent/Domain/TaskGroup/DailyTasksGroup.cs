@@ -10,7 +10,7 @@ namespace TaskerAgent.Domain.TaskGroup
     public class DailyTasksGroup : TasksGroup
     {
         [JsonProperty]
-        public INote Note { get; private set; }
+        public INote Note { get; }
 
         [JsonProperty]
         public bool IsAlreadyReported { get; private set; }

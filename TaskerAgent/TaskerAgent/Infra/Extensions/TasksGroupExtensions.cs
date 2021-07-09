@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
+using TaskerAgent.App.RepetitiveTasks;
+using TaskerAgent.Domain;
 using TaskerAgent.Domain.RepetitiveTasks;
 using TaskerAgent.Domain.TaskGroup;
 
@@ -101,6 +103,15 @@ namespace TaskerAgent.Infra.Extensions
             }
 
             return ComparisonResult.Equal;
+        }
+
+        public static IEnumerable<IRepetitiveTask> GetTasksByFrequency(this ITasksGroup currentTaskGroup, Frequency frequency)
+        {
+            foreach (IRepetitiveTask repetitiveTask in currentTaskGroup.GetAllTasks())
+            {
+                if (repetitiveTask.Frequency == frequency)
+                    yield return repetitiveTask;
+            }
         }
     }
 }
