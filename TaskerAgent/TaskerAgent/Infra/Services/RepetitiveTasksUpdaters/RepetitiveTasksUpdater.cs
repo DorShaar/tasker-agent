@@ -12,11 +12,12 @@ using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.RepetitiveTasks;
 using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.App.TasksProducers;
+using TaskerAgent.Domain;
 using TaskerAgent.Domain.Email;
 using TaskerAgent.Domain.RepetitiveTasks;
-using TaskerAgent.Domain.RepetitiveTasks.TasksClusters;
 using TaskerAgent.Domain.TaskGroup;
 using TaskerAgent.Infra.Consts;
+using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.TaskerDateTime;
 using Triangle.Time;
@@ -51,8 +52,6 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
 
         public async Task Update(ITasksGroup tasksGroupToUpdateAccordingly)
         {
-            TasksCluster tasksCluster = TasksCluster.SplitTaskGroupByFrequency(tasksGroupToUpdateAccordingly);
-
             foreach (DateTime date in DateTimeUtilities.GetNextDaysDates(mTaskerAgentOptions.CurrentValue.DaysToKeepForward))
             {
                 string groupName = date.ToString(TimeConsts.TimeFormat);
@@ -61,9 +60,9 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
                     await mTasksGroupRepository.FindAsync(groupName).ConfigureAwait(false) ??
                     await AddNewGroup(groupName).ConfigureAwait(false);
 
-                await UpdateDailyTasks(taskGroup, tasksCluster.DailyTasks).ConfigureAwait(false);
-                await UpdateWeeklyTasks(taskGroup, tasksCluster.WeeklyTasks, date).ConfigureAwait(false);
-                await UpdateMonthlyTasks(taskGroup, tasksCluster.MonthlyTasks, date).ConfigureAwait(false);
+                await UpdateDailyTasks(taskGroup, tasksGroupToUpdateAccordingly.GetTasksByFrequency(Frequency.Daily)).ConfigureAwait(false);
+                await UpdateWeeklyTasks(taskGroup, tasksGroupToUpdateAccordingly.GetTasksByFrequency(Frequency.Weekly), date).ConfigureAwait(false);
+                await UpdateMonthlyTasks(taskGroup, tasksGroupToUpdateAccordingly.GetTasksByFrequency(Frequency.Monthly), date).ConfigureAwait(false);
             }
         }
 
@@ -87,7 +86,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
         }
 
         private async Task UpdateDailyTasks(DailyTasksGroup currentTaskGroup,
-            IEnumerable<DailyRepetitiveMeasureableTask> tasksToUpdateAccordingly)
+            IEnumerable<IRepetitiveTask> tasksToUpdateAccordingly)
         {
             foreach (DailyRepetitiveMeasureableTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
             {
@@ -98,7 +97,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
         }
 
         private async Task UpdateWeeklyTasks(DailyTasksGroup currentTaskGroup,
-            IEnumerable<WeeklyRepetitiveMeasureableTask> tasksToUpdateAccordingly,
+            IEnumerable<IRepetitiveTask> tasksToUpdateAccordingly,
             DateTime date)
         {
             foreach (WeeklyRepetitiveMeasureableTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
@@ -113,7 +112,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
         }
 
         private async Task UpdateMonthlyTasks(DailyTasksGroup currentTaskGroup,
-            IEnumerable<MonthlyRepetitiveMeasureableTask> tasksToUpdateAccordingly,
+            IEnumerable<IRepetitiveTask> tasksToUpdateAccordingly,
             DateTime date)
         {
             foreach (MonthlyRepetitiveMeasureableTask taskToUpdateAccordingly in tasksToUpdateAccordingly)
