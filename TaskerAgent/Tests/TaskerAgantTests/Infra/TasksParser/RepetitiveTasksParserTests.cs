@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskData.WorkTasks.Producers;
@@ -21,7 +22,7 @@ namespace TaskerAgantTests.Infra.TasksParser
     {
         private const string TestFilesDirectory = "TestFiles";
 
-        private readonly string mInputFileName = Path.Combine(TestFilesDirectory, "repetitive_tasks.txt");
+        private readonly string mInputFileName = Path.Combine(TestFilesDirectory, "start_with_why.txt");
         private readonly ServiceProvider mServiceProvider;
         private readonly ITasksGroupProducer mTasksGroupProducer;
 
@@ -35,7 +36,7 @@ namespace TaskerAgantTests.Infra.TasksParser
         }
 
         [Fact]
-        public void ParseIntoGroup_AsExpected()
+        public async Task ParseIntoGroup_AsExpected()
         {
             ITasksGroupFactory groupsFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
             ITasksGroup group = groupsFactory.CreateGroup("test", mTasksGroupProducer).Value;
@@ -44,10 +45,10 @@ namespace TaskerAgantTests.Infra.TasksParser
                 mServiceProvider.GetRequiredService<IOptionsMonitor<TaskerAgentConfiguration>>();
             configuration.CurrentValue.InputFilePath = mInputFileName;
 
-            RepetitiveTasksParser parser = new RepetitiveTasksParser(
-                groupsFactory, new TasksProducerFactory(), configuration, NullLogger<RepetitiveTasksParser>.Instance);
+            FileTasksParser parser = new FileTasksParser(
+                groupsFactory, new TasksProducerFactory(), configuration, NullLogger<FileTasksParser>.Instance);
 
-            parser.ParseIntoGroup(group);
+            await parser.ParseIntoGroup(group).ConfigureAwait(false);
 
             List<IWorkTask> repetitiveTasks = group.GetAllTasks().ToList();
 

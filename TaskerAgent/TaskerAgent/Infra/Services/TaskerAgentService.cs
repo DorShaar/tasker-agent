@@ -11,25 +11,21 @@ using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.Services.Email;
 using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.Domain.Email;
+using TaskerAgent.Domain.TaskerDateTime;
 using TaskerAgent.Domain.TaskGroup;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services.SummaryReporters;
 using TaskerAgent.Infra.Services.TasksParser;
-using TaskerAgent.Infra.TaskerDateTime;
 using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services
 {
     public class TaskerAgentService
     {
-        private const string FromConfigGroupName = "from-config";
-
         private readonly IDbRepository<DailyTasksGroup> mTasksGroupRepository;
-        private readonly ITasksGroupFactory mTaskGroupFactory;
-        private readonly ITasksGroupProducer mTasksGroupProducer;
         private readonly IRepetitiveTasksUpdater mRepetitiveTasksUpdater;
         private readonly IEmailService mEmailService;
-        private readonly RepetitiveTasksParser mRepetitiveTasksParser;
+        private readonly FileTasksParser mRepetitiveTasksParser;
         private readonly SummaryReporter mSummaryReporter;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerOptions;
         private readonly ILogger<TaskerAgentService> mLogger;
@@ -37,18 +33,14 @@ namespace TaskerAgent.Infra.Services
         public bool IsAgentReady { get; }
 
         public TaskerAgentService(IDbRepository<DailyTasksGroup> TaskGroupRepository,
-            ITasksGroupFactory tasksGroupFactory,
-            ITasksGroupProducer tasksGroupProducer,
             IRepetitiveTasksUpdater repetitiveTasksUpdater,
             IEmailService emailService,
-            RepetitiveTasksParser repetitiveTasksParser,
+            FileTasksParser repetitiveTasksParser,
             SummaryReporter summaryReporter,
             IOptionsMonitor<TaskerAgentConfiguration> taskerOptions,
             ILogger<TaskerAgentService> logger)
         {
             mTasksGroupRepository = TaskGroupRepository ?? throw new ArgumentNullException(nameof(TaskGroupRepository));
-            mTaskGroupFactory = tasksGroupFactory ?? throw new ArgumentNullException(nameof(tasksGroupFactory));
-            mTasksGroupProducer = tasksGroupProducer ?? throw new ArgumentNullException(nameof(tasksGroupProducer));
             mRepetitiveTasksUpdater = repetitiveTasksUpdater ?? throw new ArgumentNullException(nameof(repetitiveTasksUpdater));
             mEmailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             mRepetitiveTasksParser = repetitiveTasksParser ?? throw new ArgumentNullException(nameof(repetitiveTasksParser));
@@ -118,11 +110,11 @@ namespace TaskerAgent.Infra.Services
             return tasksGroup;
         }
 
-        public async Task UpdateRepetitiveTasksFromInputFile()
+        public async Task UpdateTasksFromInputFile()
         {
             mLogger.LogDebug("Updating repetitive tasks");
 
-            ITasksGroup tasksFromConfigGroup = ReadRepetitiveTasksFromInputFile();
+            ITasksGroup tasksFromConfigGroup = await ReadTasksFromInputFile().ConfigureAwait(false);
 
             if (tasksFromConfigGroup == null)
             {
@@ -133,18 +125,9 @@ namespace TaskerAgent.Infra.Services
             await mRepetitiveTasksUpdater.Update(tasksFromConfigGroup).ConfigureAwait(false);
         }
 
-        private ITasksGroup ReadRepetitiveTasksFromInputFile()
+        private async Task<ITasksGroup> ReadTasksFromInputFile()
         {
-            OperationResult<ITasksGroup> tasksFromConfigGroupCreationResult = mTaskGroupFactory.CreateGroup(FromConfigGroupName, mTasksGroupProducer);
-            if (!tasksFromConfigGroupCreationResult.Success)
-            {
-                mLogger.LogError($"Could not create group {FromConfigGroupName}");
-                return null;
-            }
-
-            ITasksGroup tasksFromConfigGroup = tasksFromConfigGroupCreationResult.Value;
-            mRepetitiveTasksParser.ParseIntoGroup(tasksFromConfigGroup);
-            return tasksFromConfigGroup;
+            return await mRepetitiveTasksParser.ParseTasksIntoWhyGroups().ConfigureAwait(false);
         }
 
         /// <summary>

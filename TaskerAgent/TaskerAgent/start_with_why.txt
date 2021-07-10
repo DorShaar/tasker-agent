@@ -1,0 +1,36 @@
+// Format:
+// Each why will be shown right after 3 y's and new line.
+// Each why will have the next format: "<why_name>, <frequency>:"
+// Possible frequencies are: weekly, du-weekly, monthly, yearly. In case no frequency is mentioned, that means it is a one time task.
+// All of the sub tasks will be right after the why with the next format: <task_name>, <frequency>, <expected>, <measurement_type>.
+
+YYY
+Healthy Leaving, weekly:
+Drink Water, daily, 2, Liters,
+Exercise, daily, 3, Occurrences, 
+Floss, weekly, 3, Occurrences, Monday, Wednesday, Friday
+Eat healthy, weekly, 5, Occurrences,
+Sleep hours, daily, 7, hours,
+Run, Weekly, 2, Occurrences, Wednesday, Friday
+
+YYY
+Be organized at work, monthly:
+Plan holidays at work, monthly, 1, Occurrences, 15
+
+YYY
+Self education, monthly:
+Self study, monthly, 4, Occurrences,
+Read a book, monthly, 4, Occurrences,
+
+YYY
+Have time with family, du-weekly:
+Call Safta, Weekly, 2, Occurrences, Wednesday, Friday
+Out with Shiran, monthly, 2, Occurrences, 
+
+YYY
+Have time with friends, monthly:
+Meet friends, monthly, 2, Occurrences, 
+
+YYY
+Improve application:
+Finish triangle oriented feature, one-time, 01/08/2021,

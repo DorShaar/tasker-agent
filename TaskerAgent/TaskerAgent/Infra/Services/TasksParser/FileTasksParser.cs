@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using TaskData.OperationResults;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
@@ -13,31 +14,82 @@ using TaskerAgent.Infra.Options.Configurations;
 
 namespace TaskerAgent.Infra.Services.TasksParser
 {
-    public class RepetitiveTasksParser
+    public class FileTasksParser
     {
+        private const string WhysDelimeter = "YYY";
+
         private readonly ITasksGroupFactory mTaskGroupFactory;
         private readonly ITasksProducerFactory mTasksProducerFactory;
+        private readonly ITasksGroupProducer mTasksGroupProducer;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
-        private readonly ILogger<RepetitiveTasksParser> mLogger;
+        private readonly ILogger<FileTasksParser> mLogger;
 
-        public RepetitiveTasksParser(ITasksGroupFactory taskGroupFactory,
+        public FileTasksParser(ITasksGroupFactory taskGroupFactory,
             ITasksProducerFactory tasksProducerFactory,
+            ITasksGroupProducer tasksGroupProducer,
             IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
-            ILogger<RepetitiveTasksParser> logger)
+            ILogger<FileTasksParser> logger)
         {
             mTaskGroupFactory = taskGroupFactory ?? throw new ArgumentNullException(nameof(taskGroupFactory));
             mTasksProducerFactory = tasksProducerFactory ?? throw new ArgumentNullException(nameof(tasksProducerFactory));
+            mTasksGroupProducer = tasksGroupProducer ?? throw new ArgumentNullException(nameof(tasksGroupProducer));
             mTaskerAgentOptions = taskerAgentOptions ?? throw new ArgumentNullException(nameof(taskerAgentOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public void ParseIntoGroup(ITasksGroup taskGroup)
+        /// <summary>
+        /// Reads tasks from input file and returns List of groups.
+        /// Each group contains tasks, the first task is the why task, the rest are its sub tasks.
+        /// </summary>
+        public async Task<IEnumerable<ITasksGroup>> ParseTasksIntoWhyGroups()
         {
-            IEnumerable<string> lines = File.ReadLines(mTaskerAgentOptions.CurrentValue.InputFilePath);
+            List<ITasksGroup> whyGroups = new List<ITasksGroup>();
+            string text = await File.ReadAllTextAsync(mTaskerAgentOptions.CurrentValue.InputFilePath).ConfigureAwait(false);
 
-            foreach (string line in lines)
+            string[] whys = text.Split(WhysDelimeter);
+
+            foreach (string whyTasks in whys[1..])
             {
-                string[] parameters = line.Trim(',').Split(',');
+                string[] whyLines = whyTasks.TrimStart('\r').TrimStart('\n').Split("\r\n");
+
+                (string whyDescription, Frequency frequency) = ParseWhyLine(whyLines[0]);
+
+                OperationResult<ITasksGroup> tasksFromConfigGroupCreationResult = mTaskGroupFactory.CreateGroup(whyDescription, mTasksGroupProducer);
+                if (!tasksFromConfigGroupCreationResult.Success)
+                {
+                    mLogger.LogError($"Could not create group {whyDescription}");
+                    return null;
+                }
+
+                ITasksGroup tasksFromConfigGroup = tasksFromConfigGroupCreationResult.Value;
+                mTaskGroupFactory.CreateTask(tasksFromConfigGroup, ) // TODO create IWrokTaskProducer for why Task.
+
+                ParseSubTasks(tasksFromConfigGroup, whyLines[1..]);
+                whyGroups.Add(tasksFromConfigGroup);
+            }
+        }
+
+        private (string, Frequency) ParseWhyLine(string whyLine)
+        {
+            string[] parameters = whyLine.Trim(':').Split(',');
+            string whyDescription = parameters[0];
+
+            Frequency frequency = Frequency.NotDefined;
+
+            if (parameters.Length > 1)
+                Enum.TryParse(parameters[1], ignoreCase: true, out frequency);
+
+            return (whyDescription, frequency);
+        }
+
+        private void ParseSubTasks(ITasksGroup taskGroup, string[] subTasks)
+        {
+            foreach (string taskLine in subTasks)
+            {
+                if (string.IsNullOrWhiteSpace(taskLine))
+                    continue;
+
+                string[] parameters = taskLine.Trim(',').Split(',');
 
                 CreateRepetitiveTaskFromParameters(taskGroup, parameters);
             }

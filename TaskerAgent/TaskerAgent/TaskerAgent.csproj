@@ -23,14 +23,11 @@
     <PackageReference Include="NetEscapades.Configuration.Yaml" Version="2.1.0" />
     <PackageReference Include="NReco.Logging.File" Version="1.1.1" />
     <PackageReference Include="System.Collections" Version="4.3.0" />
-    <PackageReference Include="Tasker.TaskData" Version="2.0.11" />
+    <PackageReference Include="Tasker.TaskData" Version="2.0.12" />
   </ItemGroup>
 
   <ItemGroup>
     <None Update="Infra\Options\Config.yaml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="repetitive_tasks.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

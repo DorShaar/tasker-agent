@@ -7,5 +7,6 @@
         Weekly = 2,
         Monthly = 3,
         Yearly = 4,
+        DuWeekly = 5,
     }
 }

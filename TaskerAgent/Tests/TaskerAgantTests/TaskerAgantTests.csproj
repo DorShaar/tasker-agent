@@ -43,7 +43,7 @@
     <None Update="TaskerAgentDB\tasker_agent_tasks.db">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="TestFiles\repetitive_tasks.txt">
+    <None Update="TestFiles\start_with_why.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

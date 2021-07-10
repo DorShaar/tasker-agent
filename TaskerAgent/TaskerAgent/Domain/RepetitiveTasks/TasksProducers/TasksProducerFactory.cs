@@ -16,6 +16,11 @@ namespace TaskerAgent.Domain.RepetitiveTasks.TasksProducers
             return new WeeklyRepetetiveTaskProducer(Frequency.Weekly, measureType, occurrenceDays, expected, score);
         }
 
+        public IWorkTaskProducer CreateDuWeeklyProducer(MeasureType measureType, Days occurrenceDays, int expected, int score)
+        {
+            return new DuWeeklyRepetetiveTaskProducer(Frequency.DuWeekly, measureType, occurrenceDays, expected, score);
+        }
+
         public IWorkTaskProducer CreateMonthlyProducer(MeasureType measureType, List<int> daysOfMonth, int expected, int score)
         {
             return new MonthlyRepetetiveTaskProducer(Frequency.Monthly, measureType, daysOfMonth, expected, score);

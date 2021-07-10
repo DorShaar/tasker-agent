@@ -75,7 +75,7 @@ namespace TaskerAgent.Infra.HostedServices
         {
             if (mAgentTimingService.UpdateTasksFromInputFileHandler.ShouldDo)
             {
-                await mTaskerAgentService.UpdateRepetitiveTasksFromInputFile().ConfigureAwait(false);
+                await mTaskerAgentService.UpdateTasksFromInputFile().ConfigureAwait(false);
                 mAgentTimingService.UpdateTasksFromInputFileHandler.SetDone();
             }
             else

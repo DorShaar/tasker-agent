@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace TaskerAgent.Infra.TaskerDateTime
+namespace TaskerAgent.Domain.TaskerDateTime
 {
     public static class DateTimeUtilities
     {
@@ -34,10 +34,22 @@ namespace TaskerAgent.Infra.TaskerDateTime
             }
         }
 
-        private static DateTime StartOfWeek(this DateTime dt, DayOfWeek startOfWeek = DayOfWeek.Sunday)
+        private static DateTime StartOfWeek(this DateTime dateTime, DayOfWeek startOfWeek = DayOfWeek.Sunday)
         {
-            int diff = (7 + (dt.DayOfWeek - startOfWeek)) % 7;
-            return dt.AddDays(-1 * diff).Date;
+            int diff = (7 + (dateTime.DayOfWeek - startOfWeek)) % 7;
+            return dateTime.AddDays(-1 * diff).Date;
+        }
+
+        /// <summary>
+        /// Returnes the DateTime of the next given day at 6AM. Default given day is <seealso cref="DayOfWeek.Sunday"/>.
+        /// </summary>
+        /// <param name="startOfWeek"></param>
+        public static DateTime GetNextDay(DayOfWeek startOfWeek = DayOfWeek.Sunday)
+        {
+            DateTime date = DateTime.Now.Date;
+
+            int diff = 7 - (date.DayOfWeek - startOfWeek);
+            return date.AddDays(diff).AddHours(6);
         }
     }
 }
