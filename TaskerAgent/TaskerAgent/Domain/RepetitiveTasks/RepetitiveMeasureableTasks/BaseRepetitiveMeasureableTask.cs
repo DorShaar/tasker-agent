@@ -5,10 +5,10 @@ using TaskData.WorkTasks;
 using TaskerAgent.App.RepetitiveTasks;
 using Triangle;
 
-namespace TaskerAgent.Domain.RepetitiveTasks
+namespace TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public abstract class GeneralRepetitiveMeasureableTask : WorkTask, IRepetitiveMeasureableTask
+    public abstract class BaseRepetitiveMeasureableTask : WorkTask, IRepetitiveMeasureableTask
     {
         [JsonProperty]
         public Frequency Frequency { get; }
@@ -28,7 +28,7 @@ namespace TaskerAgent.Domain.RepetitiveTasks
         [JsonProperty]
         public int Score { get; set; }
 
-        internal GeneralRepetitiveMeasureableTask(string id, string description,
+        internal BaseRepetitiveMeasureableTask(string id, string description,
             Frequency frequency,
             MeasureType measureType,
             int expected,
@@ -48,7 +48,7 @@ namespace TaskerAgent.Domain.RepetitiveTasks
         }
 
         [JsonConstructor]
-        internal GeneralRepetitiveMeasureableTask(string id,
+        internal BaseRepetitiveMeasureableTask(string id,
             string groupName,
             string description,
             ITaskStatusHistory taskStatusHistory,

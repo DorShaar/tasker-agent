@@ -7,6 +7,7 @@ using System.Text;
 using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskerAgent.Domain.RepetitiveTasks;
+using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 using TaskerAgent.Infra.Options.Configurations;
 using Triangle.Time;
 
@@ -60,9 +61,9 @@ namespace TaskerAgent.Infra.Services.SummaryReporters
 
             foreach (IWorkTask task in tasksGroup.GetAllTasks())
             {
-                if (task is not GeneralRepetitiveMeasureableTask repititiveTask)
+                if (task is not BaseRepetitiveMeasureableTask repititiveTask)
                 {
-                    mLogger.LogError($"Task {task.ID} {task.Description} is not of type {nameof(GeneralRepetitiveMeasureableTask)}");
+                    mLogger.LogError($"Task {task.ID} {task.Description} is not of type {nameof(BaseRepetitiveMeasureableTask)}");
                     return;
                 }
 
@@ -127,9 +128,9 @@ namespace TaskerAgent.Infra.Services.SummaryReporters
 
             foreach (IWorkTask task in tasksGroup.GetAllTasks())
             {
-                if (task is not GeneralRepetitiveMeasureableTask repititiveTask)
+                if (task is not BaseRepetitiveMeasureableTask repititiveTask)
                 {
-                    mLogger.LogError($"Task {task.ID} {task.Description} is not of type {nameof(GeneralRepetitiveMeasureableTask)}");
+                    mLogger.LogError($"Task {task.ID} {task.Description} is not of type {nameof(BaseRepetitiveMeasureableTask)}");
                     return;
                 }
 

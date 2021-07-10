@@ -58,8 +58,10 @@ namespace TaskerAgent.Infra.Services.Calendar
             // automatically when the authorization flow completes for the first time.
             const string credPath = "token.json";
 
+            GoogleClientSecrets clientSecrets = await GoogleClientSecrets.FromStreamAsync(stream).ConfigureAwait(false);
+
             return await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                GoogleClientSecrets.Load(stream).Secrets,
+                clientSecrets.Secrets,
                 mScopes,
                 "dordatas",
                 CancellationToken.None,
@@ -108,7 +110,7 @@ namespace TaskerAgent.Infra.Services.Calendar
                 Start = startEventDateTime,
                 End = endEventDateTime,
                 // Look for Recurrence Rule at https://tools.ietf.org/html/rfc5545#section-3.8.5
-                Recurrence = new string[] { "RRULE:FREQ=DAILY;COUNT=2" }, 
+                Recurrence = new string[] { "RRULE:FREQ=DAILY;COUNT=2" },
             };
 
             EventsResource.InsertRequest request = mCalendarService.Events.Insert(newEvent, CalendarId);

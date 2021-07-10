@@ -5,7 +5,7 @@ using TaskData.TasksGroups;
 using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;
-using TaskerAgent.Domain.RepetitiveTasks;
+using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Persistence.Context;
 using Xunit;

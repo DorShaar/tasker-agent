@@ -65,8 +65,10 @@ namespace TaskerAgent.Infra.Services.Email
             // automatically when the authorization flow completes for the first time.
             const string credPath = "token.json";
 
+            GoogleClientSecrets clientSecrets = await GoogleClientSecrets.FromStreamAsync(stream).ConfigureAwait(false);
+
             return await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                GoogleClientSecrets.Load(stream).Secrets,
+                clientSecrets.Secrets,
                 mScopes,
                 "dordatas",
                 CancellationToken.None,

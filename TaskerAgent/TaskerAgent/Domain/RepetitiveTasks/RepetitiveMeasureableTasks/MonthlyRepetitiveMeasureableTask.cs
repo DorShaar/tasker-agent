@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using TaskData.TaskStatus;
 using Triangle;
 
-namespace TaskerAgent.Domain.RepetitiveTasks
+namespace TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class MonthlyRepetitiveMeasureableTask : GeneralRepetitiveMeasureableTask
+    public class MonthlyRepetitiveMeasureableTask : BaseRepetitiveMeasureableTask
     {
         private const int DefaultDayInMonth = 28;
 

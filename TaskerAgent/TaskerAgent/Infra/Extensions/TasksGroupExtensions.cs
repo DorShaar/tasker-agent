@@ -5,7 +5,7 @@ using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskerAgent.App.RepetitiveTasks;
 using TaskerAgent.Domain;
-using TaskerAgent.Domain.RepetitiveTasks;
+using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 using TaskerAgent.Domain.TaskGroup;
 
 namespace TaskerAgent.Infra.Extensions
@@ -54,8 +54,8 @@ namespace TaskerAgent.Infra.Extensions
             if (currentTask.Status != taskToCompareWith.Status)
                 return ComparisonResult.TasksContentChanged;
 
-            if (currentTask is GeneralRepetitiveMeasureableTask currentGeneralTask &&
-                taskToCompareWith is GeneralRepetitiveMeasureableTask generalTaskToCompareWith)
+            if (currentTask is BaseRepetitiveMeasureableTask currentGeneralTask &&
+                taskToCompareWith is BaseRepetitiveMeasureableTask generalTaskToCompareWith)
             {
                 return CompareGeneralTasks(currentGeneralTask, generalTaskToCompareWith);
             }
@@ -63,8 +63,8 @@ namespace TaskerAgent.Infra.Extensions
             return ComparisonResult.NoResult;
         }
 
-        private static ComparisonResult CompareGeneralTasks(GeneralRepetitiveMeasureableTask currentTask,
-            GeneralRepetitiveMeasureableTask taskToCompareWith)
+        private static ComparisonResult CompareGeneralTasks(BaseRepetitiveMeasureableTask currentTask,
+            BaseRepetitiveMeasureableTask taskToCompareWith)
         {
             if (currentTask.Actual != taskToCompareWith.Actual)
                 return ComparisonResult.TasksContentChanged;

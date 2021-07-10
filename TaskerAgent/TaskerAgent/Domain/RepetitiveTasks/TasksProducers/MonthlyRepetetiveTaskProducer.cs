@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using TaskData.WorkTasks;
 using TaskData.WorkTasks.Producers;
+using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 
 namespace TaskerAgent.Domain.RepetitiveTasks.TasksProducers
 {

@@ -3,10 +3,10 @@ using System;
 using TaskData.TaskStatus;
 using Triangle;
 
-namespace TaskerAgent.Domain.RepetitiveTasks
+namespace TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class WeeklyRepetitiveMeasureableTask : GeneralRepetitiveMeasureableTask
+    public class WeeklyRepetitiveMeasureableTask : BaseRepetitiveMeasureableTask
     {
         [JsonProperty]
         public new Days OccurrenceDays { get; }

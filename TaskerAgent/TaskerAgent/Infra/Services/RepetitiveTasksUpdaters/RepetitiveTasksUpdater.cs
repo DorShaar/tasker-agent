@@ -14,7 +14,7 @@ using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;
 using TaskerAgent.Domain.Email;
-using TaskerAgent.Domain.RepetitiveTasks;
+using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 using TaskerAgent.Domain.TaskGroup;
 using TaskerAgent.Infra.Consts;
 using TaskerAgent.Infra.Extensions;
@@ -274,7 +274,7 @@ namespace TaskerAgent.Infra.Services.RepetitiveTasksUpdaters
             string description = subMessageParts[0];
             IWorkTask task = tasks.FirstOrDefault(task => task.Description.Equals(description, StringComparison.OrdinalIgnoreCase));
 
-            if (task == null || task is not GeneralRepetitiveMeasureableTask repetitiveMeasureableTask)
+            if (task == null || task is not BaseRepetitiveMeasureableTask repetitiveMeasureableTask)
             {
                 mLogger.LogWarning($"Could not find task {description}");
                 return;

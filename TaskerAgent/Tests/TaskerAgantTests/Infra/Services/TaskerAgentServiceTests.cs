@@ -11,7 +11,7 @@ using TaskData.WorkTasks;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.Services.Email;
 using TaskerAgent.Domain.Email;
-using TaskerAgent.Domain.RepetitiveTasks;
+using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services;
@@ -209,16 +209,16 @@ Eat bamba. Expected: 2.Actual: 6
 
             List<IWorkTask> tasks = returnedTasksGroup.GetAllTasks().ToList();
 
-            GeneralRepetitiveMeasureableTask task1 = tasks[0] as GeneralRepetitiveMeasureableTask;
+            BaseRepetitiveMeasureableTask task1 = tasks[0] as BaseRepetitiveMeasureableTask;
             Assert.True(task1.Description == "Drink Water" && task1.Actual == 0);
 
-            GeneralRepetitiveMeasureableTask task2 = tasks[1] as GeneralRepetitiveMeasureableTask;
+            BaseRepetitiveMeasureableTask task2 = tasks[1] as BaseRepetitiveMeasureableTask;
             Assert.True(task2.Description == "Exercise" && task2.Actual == 0);
 
-            GeneralRepetitiveMeasureableTask task3 = tasks[2] as GeneralRepetitiveMeasureableTask;
+            BaseRepetitiveMeasureableTask task3 = tasks[2] as BaseRepetitiveMeasureableTask;
             Assert.True(task3.Description == "Sleep hours" && task3.Actual == 0);
 
-            GeneralRepetitiveMeasureableTask task4 = tasks[3] as GeneralRepetitiveMeasureableTask;
+            BaseRepetitiveMeasureableTask task4 = tasks[3] as BaseRepetitiveMeasureableTask;
             Assert.True(task4.Description == "Eat bamba" && task4.Actual == 0);
 
             await service.CheckForUserFeedbacks().ConfigureAwait(false);
@@ -227,16 +227,16 @@ Eat bamba. Expected: 2.Actual: 6
 
             tasks = returnedTasksGroup.GetAllTasks().ToList();
 
-            task1 = tasks[0] as GeneralRepetitiveMeasureableTask;
+            task1 = tasks[0] as BaseRepetitiveMeasureableTask;
             Assert.True(task1.Description == "Drink Water" && task1.Actual == 1);
 
-            task2 = tasks[1] as GeneralRepetitiveMeasureableTask;
+            task2 = tasks[1] as BaseRepetitiveMeasureableTask;
             Assert.True(task2.Description == "Exercise" && task2.Actual == 1);
 
-            task3 = tasks[2] as GeneralRepetitiveMeasureableTask;
+            task3 = tasks[2] as BaseRepetitiveMeasureableTask;
             Assert.True(task3.Description == "Sleep hours" && task3.Actual == 5);
 
-            task4 = tasks[3] as GeneralRepetitiveMeasureableTask;
+            task4 = tasks[3] as BaseRepetitiveMeasureableTask;
             Assert.True(task4.Description == "Eat bamba" && task4.Actual == 6);
         }
     }

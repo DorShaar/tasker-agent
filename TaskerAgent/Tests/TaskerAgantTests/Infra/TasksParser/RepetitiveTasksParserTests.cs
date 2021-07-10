@@ -8,7 +8,7 @@ using TaskData.TasksGroups;
 using TaskData.WorkTasks;
 using TaskData.WorkTasks.Producers;
 using TaskerAgent.Domain;
-using TaskerAgent.Domain.RepetitiveTasks;
+using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;

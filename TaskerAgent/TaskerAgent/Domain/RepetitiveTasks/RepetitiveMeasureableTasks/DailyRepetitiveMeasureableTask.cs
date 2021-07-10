@@ -2,10 +2,10 @@
 using TaskData.TaskStatus;
 using Triangle;
 
-namespace TaskerAgent.Domain.RepetitiveTasks
+namespace TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks
 {
     [JsonObject(MemberSerialization.OptIn)]
-    public class DailyRepetitiveMeasureableTask : GeneralRepetitiveMeasureableTask
+    public class DailyRepetitiveMeasureableTask : BaseRepetitiveMeasureableTask
     {
         internal DailyRepetitiveMeasureableTask(string id, string description,
             Frequency frequency,

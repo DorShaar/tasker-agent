@@ -4,6 +4,7 @@ using System;
 using TaskData.WorkTasks;
 using TaskerAgent.Domain;
 using TaskerAgent.Domain.RepetitiveTasks;
+using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 
 namespace TaskerAgent.Infra.Persistence.Context.Serialization
 {
