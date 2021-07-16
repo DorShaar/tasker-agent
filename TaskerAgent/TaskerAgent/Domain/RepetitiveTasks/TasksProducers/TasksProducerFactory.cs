@@ -25,5 +25,10 @@ namespace TaskerAgent.Domain.RepetitiveTasks.TasksProducers
         {
             return new MonthlyRepetetiveTaskProducer(Frequency.Monthly, measureType, daysOfMonth, expected, score);
         }
+
+        public IWorkTaskProducer CreateWhyTasksProducer(Frequency frequency)
+        {
+            return new WhyTaskProducer(frequency);
+        }
     }
 }

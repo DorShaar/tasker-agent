@@ -41,7 +41,7 @@ namespace TaskerAgent.Infra.Services.TasksParser
         /// Reads tasks from input file and returns List of groups.
         /// Each group contains tasks, the first task is the why task, the rest are its sub tasks.
         /// </summary>
-        public async Task<IEnumerable<ITasksGroup>> ParseTasksIntoWhyGroups()
+        public async Task<IEnumerable<ITasksGroup>> ParseTasksToWhyGroups()
         {
             List<ITasksGroup> whyGroups = new List<ITasksGroup>();
             string text = await File.ReadAllTextAsync(mTaskerAgentOptions.CurrentValue.InputFilePath).ConfigureAwait(false);
@@ -62,14 +62,23 @@ namespace TaskerAgent.Infra.Services.TasksParser
                 }
 
                 ITasksGroup tasksFromConfigGroup = tasksFromConfigGroupCreationResult.Value;
-                mTaskGroupFactory.CreateTask(tasksFromConfigGroup, ) // TODO create IWrokTaskProducer for why Task.
 
-                ParseSubTasks(tasksFromConfigGroup, whyLines[1..]);
+                IWorkTaskProducer whyTasksProducer = mTasksProducerFactory.CreateWhyTasksProducer(frequency);
+                OperationResult<IWorkTask> whyTaskCreationResult = mTaskGroupFactory.CreateTask(tasksFromConfigGroup, whyDescription, whyTasksProducer);
+                if (!whyTaskCreationResult.Success)
+                {
+                    mLogger.LogError($"Could not create group {whyDescription}");
+                    return null;
+                }
+
+                ParseSubTasksAndAddToGroup(tasksFromConfigGroup, whyLines[1..]);
                 whyGroups.Add(tasksFromConfigGroup);
             }
+
+            return whyGroups;
         }
 
-        private (string, Frequency) ParseWhyLine(string whyLine)
+        private static (string, Frequency) ParseWhyLine(string whyLine)
         {
             string[] parameters = whyLine.Trim(':').Split(',');
             string whyDescription = parameters[0];
@@ -82,7 +91,7 @@ namespace TaskerAgent.Infra.Services.TasksParser
             return (whyDescription, frequency);
         }
 
-        private void ParseSubTasks(ITasksGroup taskGroup, string[] subTasks)
+        private void ParseSubTasksAndAddToGroup(ITasksGroup taskGroup, string[] subTasks)
         {
             foreach (string taskLine in subTasks)
             {
@@ -214,6 +223,12 @@ namespace TaskerAgent.Infra.Services.TasksParser
             if (parseComponents.Frequency == Frequency.Weekly)
             {
                 return mTasksProducerFactory.CreateWeeklyProducer(
+                    parseComponents.MeasureType, parseComponents.OccurrenceDays, parseComponents.Expected, score: 1);
+            }
+
+            if (parseComponents.Frequency == Frequency.DuWeekly)
+            {
+                return mTasksProducerFactory.CreateDuWeeklyProducer(
                     parseComponents.MeasureType, parseComponents.OccurrenceDays, parseComponents.Expected, score: 1);
             }
 

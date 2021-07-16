@@ -114,7 +114,7 @@ namespace TaskerAgent.Infra.Services
         {
             mLogger.LogDebug("Updating repetitive tasks");
 
-            ITasksGroup tasksFromConfigGroup = await ReadTasksFromInputFile().ConfigureAwait(false);
+            IEnumerable<ITasksGroup> tasksFromConfigGroup = await ReadTasksFromInputFile().ConfigureAwait(false);
 
             if (tasksFromConfigGroup == null)
             {
@@ -122,12 +122,13 @@ namespace TaskerAgent.Infra.Services
                 return;
             }
 
-            await mRepetitiveTasksUpdater.Update(tasksFromConfigGroup).ConfigureAwait(false);
+            // TODO think if needed.
+            //await mRepetitiveTasksUpdater.Update(tasksFromConfigGroup).ConfigureAwait(false);
         }
 
-        private async Task<ITasksGroup> ReadTasksFromInputFile()
+        private async Task<IEnumerable<ITasksGroup>> ReadTasksFromInputFile()
         {
-            return await mRepetitiveTasksParser.ParseTasksIntoWhyGroups().ConfigureAwait(false);
+            return await mRepetitiveTasksParser.ParseTasksToWhyGroups().ConfigureAwait(false);
         }
 
         /// <summary>

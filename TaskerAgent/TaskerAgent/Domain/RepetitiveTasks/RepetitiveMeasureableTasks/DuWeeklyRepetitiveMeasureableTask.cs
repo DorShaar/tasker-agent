@@ -11,7 +11,8 @@ namespace TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks
         [JsonProperty]
         public new Days OccurrenceDays { get; }
 
-        internal DuWeeklyRepetitiveMeasureableTask(string id, string description,
+        internal DuWeeklyRepetitiveMeasureableTask(string id,
+            string description,
             Frequency frequency,
             MeasureType measureType,
             Days occurrenceDays,

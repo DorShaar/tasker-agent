@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -36,7 +37,7 @@ namespace TaskerAgantTests.Infra.TasksParser
         }
 
         [Fact]
-        public async Task ParseIntoGroup_AsExpected()
+        public async Task ParseTasksToWhyGroups_AsExpected()
         {
             ITasksGroupFactory groupsFactory = mServiceProvider.GetRequiredService<ITasksGroupFactory>();
             ITasksGroup group = groupsFactory.CreateGroup("test", mTasksGroupProducer).Value;
@@ -46,49 +47,71 @@ namespace TaskerAgantTests.Infra.TasksParser
             configuration.CurrentValue.InputFilePath = mInputFileName;
 
             FileTasksParser parser = new FileTasksParser(
-                groupsFactory, new TasksProducerFactory(), configuration, NullLogger<FileTasksParser>.Instance);
+                groupsFactory, new TasksProducerFactory(), new TasksGroupProducer(), configuration, NullLogger<FileTasksParser>.Instance);
 
-            await parser.ParseIntoGroup(group).ConfigureAwait(false);
+            IEnumerable<ITasksGroup> whyGroups = await parser.ParseTasksToWhyGroups().ConfigureAwait(false);
 
-            List<IWorkTask> repetitiveTasks = group.GetAllTasks().ToList();
+            List<IWorkTask> tasks = new List<IWorkTask>();
+            whyGroups.ToList().ForEach(group => tasks.AddRange(group.GetAllTasks()));
 
-            if (repetitiveTasks[0] is not DailyRepetitiveMeasureableTask repetitiveMeasureableTask0     ||
-                repetitiveTasks[1] is not DailyRepetitiveMeasureableTask repetitiveMeasureableTask1     ||
-                repetitiveTasks[2] is not WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask2    ||
-                repetitiveTasks[3] is not WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask3    ||
-                repetitiveTasks[4] is not DailyRepetitiveMeasureableTask repetitiveMeasureableTask4     ||
-                repetitiveTasks[5] is not MonthlyRepetitiveMeasureableTask repetitiveMeasureableTask5   ||
-                repetitiveTasks[6] is not WeeklyRepetitiveMeasureableTask repetitiveMeasureableTask6    ||
-                repetitiveTasks[8] is not MonthlyRepetitiveMeasureableTask repetitiveMeasureableTask8)
+            if (tasks[0] is not WhyMeasureableTask healthyLeavingWhyTask            ||
+                tasks[1] is not DailyRepetitiveMeasureableTask drinkWaterTask       ||
+                tasks[2] is not DailyRepetitiveMeasureableTask exerciseTask         ||
+                tasks[3] is not WeeklyRepetitiveMeasureableTask flossTask           ||
+                tasks[4] is not WeeklyRepetitiveMeasureableTask eayHealthyTask      ||
+                tasks[5] is not DailyRepetitiveMeasureableTask sleepTask            ||
+                tasks[6] is not WeeklyRepetitiveMeasureableTask runTask             ||
+                tasks[7] is not WhyMeasureableTask organizedWorkWhyTask             ||
+                tasks[8] is not MonthlyRepetitiveMeasureableTask planHolidaysTask   ||
+                tasks[10] is not MonthlyRepetitiveMeasureableTask selfStudyTask     ||
+                tasks[12] is not WhyMeasureableTask timeWithFamilyWhyTask           ||
+                tasks[17] is not WhyMeasureableTask improveApplicationWhyTask       ||
+                tasks[18] is not WorkTask finishTriangleOrientedFeatureTask)
             {
                 Assert.False(true);
                 return;
             }
 
-            Assert.Equal("Drink Water", repetitiveMeasureableTask0.Description);
-            Assert.Equal(MeasureType.Liters, repetitiveMeasureableTask0.MeasureType);
+            Assert.Equal("Healthy Leaving", healthyLeavingWhyTask.Description);
+            Assert.Equal(Frequency.Weekly, healthyLeavingWhyTask.Frequency);
 
-            Assert.Equal("Exercise", repetitiveMeasureableTask1.Description);
-            Assert.Equal(MeasureType.Occurrences, repetitiveMeasureableTask1.MeasureType);
+            Assert.Equal("Drink Water", drinkWaterTask.Description);
+            Assert.Equal(MeasureType.Liters, drinkWaterTask.MeasureType);
 
-            Assert.Equal("Floss", repetitiveMeasureableTask2.Description);
+            Assert.Equal("Exercise", exerciseTask.Description);
+            Assert.Equal(MeasureType.Occurrences, exerciseTask.MeasureType);
 
-            Assert.Equal("Eat bamba", repetitiveMeasureableTask3.Description);
-            Assert.Equal(Days.Saturday, repetitiveMeasureableTask3.OccurrenceDays);
+            Assert.Equal("Floss", flossTask.Description);
+            Assert.Equal(Days.Monday | Days.Wednesday| Days.Friday, exerciseTask.OccurrenceDays);
 
-            Assert.Equal("Sleep hours", repetitiveMeasureableTask4.Description);
+            Assert.Equal("Eat Healthy", eayHealthyTask.Description);
+            Assert.Equal(Days.Saturday, eayHealthyTask.OccurrenceDays);
 
-            Assert.Equal("Plan holidays at work", repetitiveMeasureableTask5.Description);
-            Assert.Equal(15, repetitiveMeasureableTask5.DaysOfMonth[0]);
+            Assert.Equal("Sleep hours", sleepTask.Description);
 
-            Assert.Equal("Run", repetitiveMeasureableTask6.Description);
-            Assert.Equal(Days.Wednesday | Days.Friday, repetitiveMeasureableTask6.OccurrenceDays);
+            Assert.Equal("Run", runTask.Description);
+            Assert.Equal(Days.Wednesday | Days.Friday, runTask.OccurrenceDays);
 
-            Assert.Equal("Self study", repetitiveMeasureableTask8.Description);
-            Assert.Equal(25, repetitiveMeasureableTask8.DaysOfMonth[0]);
-            Assert.Equal(26, repetitiveMeasureableTask8.DaysOfMonth[1]);
-            Assert.Equal(27, repetitiveMeasureableTask8.DaysOfMonth[2]);
-            Assert.Equal(28, repetitiveMeasureableTask8.DaysOfMonth[3]);
+            Assert.Equal("Be organized at work", organizedWorkWhyTask.Description);
+            Assert.Equal(Frequency.Monthly, healthyLeavingWhyTask.Frequency);
+
+            Assert.Equal("Plan holidays at work", planHolidaysTask.Description);
+            Assert.Equal(15, planHolidaysTask.DaysOfMonth[0]);
+
+            Assert.Equal("Self study", selfStudyTask.Description);
+            Assert.Equal(25, planHolidaysTask.DaysOfMonth[0]);
+            Assert.Equal(26, planHolidaysTask.DaysOfMonth[1]);
+            Assert.Equal(27, planHolidaysTask.DaysOfMonth[2]);
+            Assert.Equal(28, planHolidaysTask.DaysOfMonth[3]);
+
+            Assert.Equal("Have time with family", timeWithFamilyWhyTask.Description);
+            Assert.Equal(Frequency.DuWeekly, timeWithFamilyWhyTask.Frequency);
+
+            Assert.Equal("Improve application", improveApplicationWhyTask.Description);
+            Assert.Equal(Frequency.NotDefined, improveApplicationWhyTask.Frequency);
+
+            Assert.Equal("Finish triangle oriented feature", finishTriangleOrientedFeatureTask.Description);
+            Assert.Equal(DateTime.Parse("01/08/2021").Date, finishTriangleOrientedFeatureTask.TaskMeasurement.Time.GetExpectedDueDate().Date);
         }
     }
 }
