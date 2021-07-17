@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TaskData.TasksGroups;
+using TaskData.TasksGroups.Producers;
 using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;

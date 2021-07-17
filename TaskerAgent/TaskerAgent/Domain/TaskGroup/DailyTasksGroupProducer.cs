@@ -1,5 +1,5 @@
 ﻿using TaskData.TasksGroups;
-using TaskData.WorkTasks.Producers;
+using TaskData.TasksGroups.Producers;
 
 namespace TaskerAgent.Domain.TaskGroup
 {

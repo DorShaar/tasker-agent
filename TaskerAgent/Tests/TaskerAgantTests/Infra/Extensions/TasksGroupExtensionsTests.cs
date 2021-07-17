@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using TaskData.TasksGroups;
-using TaskData.WorkTasks;
+using TaskData.TasksGroups.Producers;
 using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;

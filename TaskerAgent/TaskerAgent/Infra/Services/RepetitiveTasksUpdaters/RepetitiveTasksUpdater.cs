@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using TaskData.OperationResults;
 using TaskData.TasksGroups;
+using TaskData.TasksGroups.Producers;
 using TaskData.WorkTasks;
 using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.Persistence.Repositories;

@@ -7,8 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using TaskData.TasksGroups;
+using TaskData.TasksGroups.Producers;
 using TaskData.WorkTasks;
-using TaskData.WorkTasks.Producers;
 using TaskerAgent.Domain;
 using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
@@ -82,9 +82,9 @@ namespace TaskerAgantTests.Infra.TasksParser
             Assert.Equal(MeasureType.Occurrences, exerciseTask.MeasureType);
 
             Assert.Equal("Floss", flossTask.Description);
-            Assert.Equal(Days.Monday | Days.Wednesday| Days.Friday, exerciseTask.OccurrenceDays);
+            Assert.Equal(Days.Monday | Days.Wednesday| Days.Friday, flossTask.OccurrenceDays);
 
-            Assert.Equal("Eat Healthy", eayHealthyTask.Description);
+            Assert.Equal("Eat healthy", eayHealthyTask.Description);
             Assert.Equal(Days.Saturday, eayHealthyTask.OccurrenceDays);
 
             Assert.Equal("Sleep hours", sleepTask.Description);
@@ -93,16 +93,16 @@ namespace TaskerAgantTests.Infra.TasksParser
             Assert.Equal(Days.Wednesday | Days.Friday, runTask.OccurrenceDays);
 
             Assert.Equal("Be organized at work", organizedWorkWhyTask.Description);
-            Assert.Equal(Frequency.Monthly, healthyLeavingWhyTask.Frequency);
+            Assert.Equal(Frequency.Monthly, organizedWorkWhyTask.Frequency);
 
             Assert.Equal("Plan holidays at work", planHolidaysTask.Description);
             Assert.Equal(15, planHolidaysTask.DaysOfMonth[0]);
 
             Assert.Equal("Self study", selfStudyTask.Description);
-            Assert.Equal(25, planHolidaysTask.DaysOfMonth[0]);
-            Assert.Equal(26, planHolidaysTask.DaysOfMonth[1]);
-            Assert.Equal(27, planHolidaysTask.DaysOfMonth[2]);
-            Assert.Equal(28, planHolidaysTask.DaysOfMonth[3]);
+            Assert.Equal(25, selfStudyTask.DaysOfMonth[0]);
+            Assert.Equal(26, selfStudyTask.DaysOfMonth[1]);
+            Assert.Equal(27, selfStudyTask.DaysOfMonth[2]);
+            Assert.Equal(28, selfStudyTask.DaysOfMonth[3]);
 
             Assert.Equal("Have time with family", timeWithFamilyWhyTask.Description);
             Assert.Equal(Frequency.DuWeekly, timeWithFamilyWhyTask.Frequency);

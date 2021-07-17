@@ -13,6 +13,7 @@ namespace TaskerAgent.Infra.Services.TasksParser
         public int Expected { get; private set; }
         public Days OccurrenceDays { get; private set; }
         public List<int> DaysOfMonth { get; private set; }
+        public DateTime DueDateTime { get; private set; }
 
         public void FailParse()
         {
@@ -21,6 +22,8 @@ namespace TaskerAgent.Infra.Services.TasksParser
 
         public bool SetFrequency(string frequencyString)
         {
+            Frequency = Frequency.NotDefined;
+
             if (!Enum.TryParse(frequencyString, ignoreCase: true, out Frequency frequency))
                 return false;
 
@@ -77,6 +80,17 @@ namespace TaskerAgent.Infra.Services.TasksParser
                 OccurrenceDays |= day;
             }
 
+            return true;
+        }
+
+        public bool SetDueDateTime(string dateString)
+        {
+            bool parseSucceeded = DateTime.TryParse(dateString, out DateTime dateTime);
+
+            if (!parseSucceeded)
+                return false;
+
+            DueDateTime = dateTime;
             return true;
         }
     }

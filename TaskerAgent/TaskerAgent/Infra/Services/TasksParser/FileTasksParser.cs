@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading.Tasks;
 using TaskData.OperationResults;
 using TaskData.TasksGroups;
+using TaskData.TasksGroups.Producers;
 using TaskData.WorkTasks;
 using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.TasksProducers;
@@ -72,6 +73,8 @@ namespace TaskerAgent.Infra.Services.TasksParser
                 }
 
                 ParseSubTasksAndAddToGroup(tasksFromConfigGroup, whyLines[1..]);
+                // TODO add to why groups the sub tasks descriptions + add test to it.
+                // TODO add expected due dated for why tasks.
                 whyGroups.Add(tasksFromConfigGroup);
             }
 
@@ -86,7 +89,10 @@ namespace TaskerAgent.Infra.Services.TasksParser
             Frequency frequency = Frequency.NotDefined;
 
             if (parameters.Length > 1)
-                Enum.TryParse(parameters[1], ignoreCase: true, out frequency);
+            {
+                string frequencyString = parameters[1].Replace(" ", string.Empty).Replace("-", string.Empty);
+                Enum.TryParse(frequencyString, ignoreCase: true, out frequency);
+            }
 
             return (whyDescription, frequency);
         }
@@ -100,11 +106,11 @@ namespace TaskerAgent.Infra.Services.TasksParser
 
                 string[] parameters = taskLine.Trim(',').Split(',');
 
-                CreateRepetitiveTaskFromParameters(taskGroup, parameters);
+                CreateTaskFromParameters(taskGroup, parameters);
             }
         }
 
-        private void CreateRepetitiveTaskFromParameters(ITasksGroup taskGroup, string[] parameters)
+        private void CreateTaskFromParameters(ITasksGroup taskGroup, string[] parameters)
         {
             try
             {
@@ -141,6 +147,9 @@ namespace TaskerAgent.Infra.Services.TasksParser
 
             if (!parseComponents.SetFrequency(parameters[1]))
             {
+                if (parameters[1].Trim().Equals("one-time", StringComparison.OrdinalIgnoreCase))
+                    return CreatedParsedComponentesForOneTimeTask(parameters[2]);
+
                 mLogger.LogError($"Could not set frequency for task {taskDescription}");
                 parseComponents.FailParse();
                 return parseComponents;
@@ -181,6 +190,20 @@ namespace TaskerAgent.Infra.Services.TasksParser
                         return parseComponents;
                     }
                 }
+            }
+
+            return parseComponents;
+        }
+
+        private ParsedComponents CreatedParsedComponentesForOneTimeTask(string dateString)
+        {
+            ParsedComponents parseComponents = new ParsedComponents();
+
+            if (!parseComponents.SetDueDateTime(dateString))
+            {
+                mLogger.LogError($"Could not set due date time with date {dateString}");
+                parseComponents.FailParse();
+                return parseComponents;
             }
 
             return parseComponents;
@@ -236,6 +259,11 @@ namespace TaskerAgent.Infra.Services.TasksParser
             {
                 return mTasksProducerFactory.CreateMonthlyProducer(
                     parseComponents.MeasureType, parseComponents.DaysOfMonth, parseComponents.Expected, score: 1);
+            }
+
+            if (parseComponents.Frequency == Frequency.NotDefined)
+            {
+                return mTasksProducerFactory.CreateRegularTaskProducer(parseComponents.DueDateTime);
             }
 
             return null;
