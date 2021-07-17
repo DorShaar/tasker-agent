@@ -11,7 +11,9 @@ using TaskData.WorkTasks;
 using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;
+using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 using TaskerAgent.Infra.Options.Configurations;
+using Triangle;
 
 namespace TaskerAgent.Infra.Services.TasksParser
 {
@@ -55,27 +57,25 @@ namespace TaskerAgent.Infra.Services.TasksParser
 
                 (string whyDescription, Frequency frequency) = ParseWhyLine(whyLines[0]);
 
-                OperationResult<ITasksGroup> tasksFromConfigGroupCreationResult = mTaskGroupFactory.CreateGroup(whyDescription, mTasksGroupProducer);
-                if (!tasksFromConfigGroupCreationResult.Success)
+                OperationResult<ITasksGroup> groupFromDataFileCreationResult = mTaskGroupFactory.CreateGroup(whyDescription, mTasksGroupProducer);
+                if (!groupFromDataFileCreationResult.Success)
                 {
                     mLogger.LogError($"Could not create group {whyDescription}");
                     return null;
                 }
 
-                ITasksGroup tasksFromConfigGroup = tasksFromConfigGroupCreationResult.Value;
+                ITasksGroup groupFromDataFile = groupFromDataFileCreationResult.Value;
 
                 IWorkTaskProducer whyTasksProducer = mTasksProducerFactory.CreateWhyTasksProducer(frequency);
-                OperationResult<IWorkTask> whyTaskCreationResult = mTaskGroupFactory.CreateTask(tasksFromConfigGroup, whyDescription, whyTasksProducer);
-                if (!whyTaskCreationResult.Success)
+                OperationResult<IWorkTask> whyTaskCreationResult = mTaskGroupFactory.CreateTask(groupFromDataFile, whyDescription, whyTasksProducer);
+                if (!whyTaskCreationResult.Success || whyTaskCreationResult.Value is not WhyMeasureableTask whyTask)
                 {
-                    mLogger.LogError($"Could not create group {whyDescription}");
+                    mLogger.LogError($"Creation of why task {whyDescription} failed");
                     return null;
                 }
 
-                ParseSubTasksAndAddToGroup(tasksFromConfigGroup, whyLines[1..]);
-                // TODO add to why groups the sub tasks descriptions + add test to it.
-                // TODO add expected due dated for why tasks.
-                whyGroups.Add(tasksFromConfigGroup);
+                ParseSubTasksAndAddToGroup(groupFromDataFile, whyLines[1..], whyTask);
+                whyGroups.Add(groupFromDataFile);
             }
 
             return whyGroups;
@@ -97,7 +97,7 @@ namespace TaskerAgent.Infra.Services.TasksParser
             return (whyDescription, frequency);
         }
 
-        private void ParseSubTasksAndAddToGroup(ITasksGroup taskGroup, string[] subTasks)
+        private void ParseSubTasksAndAddToGroup(ITasksGroup taskGroup, string[] subTasks, WhyMeasureableTask whyTask)
         {
             foreach (string taskLine in subTasks)
             {
@@ -106,11 +106,11 @@ namespace TaskerAgent.Infra.Services.TasksParser
 
                 string[] parameters = taskLine.Trim(',').Split(',');
 
-                CreateTaskFromParameters(taskGroup, parameters);
+                CreateTaskFromParameters(taskGroup, parameters, whyTask);
             }
         }
 
-        private void CreateTaskFromParameters(ITasksGroup taskGroup, string[] parameters)
+        private void CreateTaskFromParameters(ITasksGroup taskGroup, string[] parameters, WhyMeasureableTask whyTask)
         {
             try
             {
@@ -131,7 +131,12 @@ namespace TaskerAgent.Infra.Services.TasksParser
                 OperationResult<IWorkTask> createTaskResult = mTaskGroupFactory.CreateTask(taskGroup, taskDescription, taskProducer);
 
                 if (!createTaskResult.Success)
+                {
                     mLogger.LogError($"Could not create task {taskDescription}");
+                    return;
+                }
+
+                UpdateWhyTaskMeasurement(whyTask, createTaskResult.Value);
             }
             catch (IndexOutOfRangeException ex)
             {
@@ -207,6 +212,16 @@ namespace TaskerAgent.Infra.Services.TasksParser
             }
 
             return parseComponents;
+        }
+
+        private static void UpdateWhyTaskMeasurement(IWorkTask whyTask, IWorkTask workSubTask)
+        {
+            whyTask.TaskMeasurement.Content.AddContent(workSubTask.ID);
+            if (workSubTask.TaskMeasurement != null)
+            {
+                whyTask.TaskMeasurement.Time.StartTime = workSubTask.TaskMeasurement.Time.StartTime;
+                whyTask.TaskMeasurement.Time.ExpectedDuration = TimeSpan.FromMinutes(5);
+            }
         }
 
         private void LogError(IndexOutOfRangeException ex, string[] parameters)

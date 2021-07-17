@@ -5,6 +5,8 @@ namespace TaskerAgent.Domain.TaskerDateTime
 {
     public static class DateTimeUtilities
     {
+        private const int DefaultHour = 6;
+
         public static IEnumerable<DateTime> GetNextDaysDates(int nextDays)
         {
             for (int i = 0; i < nextDays; ++i)
@@ -41,15 +43,15 @@ namespace TaskerAgent.Domain.TaskerDateTime
         }
 
         /// <summary>
-        /// Returnes the DateTime of the next given day at 6AM. Default given day is <seealso cref="DayOfWeek.Sunday"/>.
+        /// Returnes the DateTime of the next given day at <see cref="DefaultHour"/>.
         /// </summary>
         /// <param name="startOfWeek"></param>
-        public static DateTime GetNextDay(DayOfWeek startOfWeek = DayOfWeek.Sunday)
+        public static DateTime GetNextDay(DayOfWeek startOfWeek)
         {
             DateTime date = DateTime.Now.Date;
 
             int diff = 7 - (date.DayOfWeek - startOfWeek);
-            return date.AddDays(diff).AddHours(6);
+            return date.AddDays(diff).AddHours(DefaultHour);
         }
     }
 }
