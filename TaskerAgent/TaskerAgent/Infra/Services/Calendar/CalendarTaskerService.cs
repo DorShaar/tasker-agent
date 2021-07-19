@@ -6,11 +6,13 @@ using Google.Apis.Util.Store;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using TaskerAgent.App.Services.Calendar;
 using TaskerAgent.Domain;
+using TaskerAgent.Domain.Calendar;
 using TaskerAgent.Infra.Options.Configurations;
 
 namespace TaskerAgent.Infra.Services.Calendar
@@ -68,25 +70,36 @@ namespace TaskerAgent.Infra.Services.Calendar
                 new FileDataStore(credPath, true)).ConfigureAwait(false);
         }
 
-        public async Task PullEvents()
+        public async Task<IEnumerable<EventInfo>> PullEvents(DateTime lowerTimeBoundary, DateTime upperTimeBoundary)
         {
             if (!mIsConnected)
                 throw new InvalidOperationException("Could not pull events. Please connect first");
 
-            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
-            request.TimeMin = DateTime.Now;
-            request.TimeMax = DateTime.Now.AddDays(mTaskerAgentOptions.CurrentValue.DaysToKeepForward);
-            request.SingleEvents = true;
-            request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
+            List<EventInfo> eventsInfo = new List<EventInfo>();
 
-            Events events = await request.ExecuteAsync().ConfigureAwait(false);
-            if (events.Items != null && events.Items.Count > 0)
+            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
+            request.TimeMin = lowerTimeBoundary;
+            request.TimeMax = upperTimeBoundary;
+            //request.SingleEvents = true; // TODO
+            //request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
+
+            Events calendarEvents = await request.ExecuteAsync().ConfigureAwait(false);
+            if (calendarEvents.Items?.Count > 0)
             {
-                foreach (Event eventItem in events.Items)
+                foreach (Event eventItem in calendarEvents.Items)
                 {
-                    string when = eventItem.Start.DateTime.ToString();
+                    EventInfo eventInfo = new EventInfo
+                    {
+                        EventName = eventItem.Description,
+                        EventStartTime = eventItem.Start.DateTime ?? default,
+                        EventEndTime = eventItem.End.DateTime ?? default,
+                    };
+
+                    eventsInfo.Add(eventInfo);
                 }
             }
+
+            return eventsInfo;
         }
 
         public async Task PushEvent(string summary, DateTime start, DateTime end, Frequency frequency)
