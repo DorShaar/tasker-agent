@@ -15,7 +15,6 @@ namespace TaskerAgantTests.Infra.Services.Calendar
     public class CalendarTaskerServiceTests
     {
         [Fact(Skip = "Requires real calendar. To be tested manually")]
-        //[Fact]
         public async Task PullEvents_AsExpected()
         {
             IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();

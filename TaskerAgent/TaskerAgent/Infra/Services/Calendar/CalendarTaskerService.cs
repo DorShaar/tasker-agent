@@ -77,29 +77,46 @@ namespace TaskerAgent.Infra.Services.Calendar
 
             List<EventInfo> eventsInfo = new List<EventInfo>();
 
-            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
-            request.TimeMin = lowerTimeBoundary;
-            request.TimeMax = upperTimeBoundary;
-            //request.SingleEvents = true; // TODO
-            //request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
+            EventsResource.ListRequest request = CreateEventsRequest(lowerTimeBoundary, upperTimeBoundary);
 
             Events calendarEvents = await request.ExecuteAsync().ConfigureAwait(false);
+
             if (calendarEvents.Items?.Count > 0)
             {
                 foreach (Event eventItem in calendarEvents.Items)
                 {
-                    EventInfo eventInfo = new EventInfo
-                    {
-                        EventName = eventItem.Description,
-                        EventStartTime = eventItem.Start.DateTime ?? default,
-                        EventEndTime = eventItem.End.DateTime ?? default,
-                    };
-
-                    eventsInfo.Add(eventInfo);
+                    eventsInfo.Add(ToEventInfo(eventItem));
                 }
             }
 
             return eventsInfo;
+        }
+
+        private EventsResource.ListRequest CreateEventsRequest(DateTime lowerTimeBoundary, DateTime upperTimeBoundary)
+        {
+            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
+            request.TimeMin = lowerTimeBoundary;
+            request.TimeMax = upperTimeBoundary;
+            request.SingleEvents = true;
+
+            return request;
+        }
+
+        private static EventInfo ToEventInfo(Event eventItem)
+        {
+            if (eventItem.RecurringEventId == null)
+            {
+                return new EventInfo(eventItem.Id,
+                    eventItem.Description,
+                    eventItem.Start.DateTime ?? default,
+                    eventItem.End.DateTime ?? default);
+            }
+
+            return new RecurringEventInfo(eventItem.Id,
+                    eventItem.Description,
+                    eventItem.Start.DateTime ?? default,
+                    eventItem.End.DateTime ?? default,
+                    eventItem.RecurringEventId);
         }
 
         public async Task PushEvent(string summary, DateTime start, DateTime end, Frequency frequency)
