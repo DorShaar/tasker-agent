@@ -4,6 +4,7 @@ using TaskerAgent.Domain.Email;
 
 namespace TaskerAgent.App.Services.RepetitiveTasksUpdaters
 {
+    // TODO delete
     public interface IRepetitiveTasksUpdater
     {
         Task<bool> UpdateGroupByMessage(MessageInfo message);
