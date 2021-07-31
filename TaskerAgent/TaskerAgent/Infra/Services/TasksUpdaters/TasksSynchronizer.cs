@@ -32,8 +32,8 @@ namespace TaskerAgent.Infra.Services.TasksUpdaters
             // TOOD use https://developers.google.com/calendar/api/guides/sync.
 
             await mCalendarService.PullEvents(lowerTimeBoundary, upperTimeBoundary).ConfigureAwait(false);
-
-
+            throw new NotImplementedException();
+            //return new SyncObjects();
         }
 
         public Task Synchronize()

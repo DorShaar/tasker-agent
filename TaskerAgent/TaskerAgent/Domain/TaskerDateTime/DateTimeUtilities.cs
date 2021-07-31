@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Triangle.Time;
 
 namespace TaskerAgent.Domain.TaskerDateTime
 {
@@ -52,6 +53,11 @@ namespace TaskerAgent.Domain.TaskerDateTime
 
             int diff = 7 - (date.DayOfWeek - startOfWeek);
             return date.AddDays(diff).AddHours(DefaultHour);
+        }
+
+        public static string ToDateName(this DateTime date)
+        {
+            return date.ToString(TimeConsts.TimeFormat).Replace('/', '-');
         }
     }
 }

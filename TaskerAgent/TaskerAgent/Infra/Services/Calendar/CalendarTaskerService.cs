@@ -3,6 +3,7 @@ using Google.Apis.Calendar.v3;
 using Google.Apis.Calendar.v3.Data;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
+using Google.Cloud.Storage.V1;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
@@ -13,7 +14,9 @@ using System.Threading.Tasks;
 using TaskerAgent.App.Services.Calendar;
 using TaskerAgent.Domain;
 using TaskerAgent.Domain.Calendar;
+using TaskerAgent.Domain.TaskerDateTime;
 using TaskerAgent.Infra.Options.Configurations;
+using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services.Calendar
 {
@@ -21,6 +24,8 @@ namespace TaskerAgent.Infra.Services.Calendar
     {
         private const string ApplicationName = "TaskerAgent";
         private const string CalendarId = "primary";
+        private const string SyncTokensDirectory = "sync_tokens";
+        private const int LargetsMonthInDays = 31;
 
         private readonly string[] mScopes = new[] { CalendarService.Scope.Calendar };
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
@@ -38,7 +43,7 @@ namespace TaskerAgent.Infra.Services.Calendar
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task Connect()
+        public async Task Connect(CancellationToken cancellationToken = default)
         {
             mCalendarService = new CalendarService(new BaseClientService.Initializer()
             {
@@ -49,6 +54,22 @@ namespace TaskerAgent.Infra.Services.Calendar
             mLogger.LogInformation("Connected to Google Calendar service");
 
             mIsConnected = true;
+        }
+
+        private async Task ConnectGoogleCloud(CancellationToken cancellationToken)
+        {
+            GoogleCredential credential = await GoogleCredential.FromFileAsync(
+                mTaskerAgentOptions.CurrentValue.CredentialsPath, cancellationToken)
+                .ConfigureAwait(false);
+
+            StorageClient storage = StorageClient.Create(credential);
+
+            // Make an authenticated API request.
+            var buckets = storage.ListBuckets("taskeragent-309515");
+            foreach (var bucket in buckets)
+            {
+                Console.WriteLine(bucket.Name);
+            }
         }
 
         private async Task<UserCredential> GetUserCredential()
@@ -67,7 +88,7 @@ namespace TaskerAgent.Infra.Services.Calendar
                 mScopes,
                 "dordatas",
                 CancellationToken.None,
-                new FileDataStore(credPath, true)).ConfigureAwait(false);
+                new FileDataStore(credPath)).ConfigureAwait(false);
         }
 
         public async Task<IEnumerable<EventInfo>> PullEvents(DateTime lowerTimeBoundary, DateTime upperTimeBoundary)
@@ -146,6 +167,27 @@ namespace TaskerAgent.Infra.Services.Calendar
             EventsResource.InsertRequest request = mCalendarService.Events.Insert(newEvent, CalendarId);
 
             _ = await request.ExecuteAsync().ConfigureAwait(false);
+        }
+
+        public async Task InitialFullSynchronization()
+        {
+            if (!mIsConnected)
+                throw new InvalidOperationException("Could not push events. Please connect first");
+
+            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
+
+            request.TimeMin = DateTime.Now.AddDays(-LargetsMonthInDays);
+            request.TimeMax = DateTime.Now.AddDays(LargetsMonthInDays);
+            request.SingleEvents = true;
+
+            Events events = await request.ExecuteAsync().ConfigureAwait(false);
+
+            string syncTokensDirectory = Directory.CreateDirectory(Path.Combine(
+                mTaskerAgentOptions.CurrentValue.DatabaseDirectoryPath, SyncTokensDirectory)).FullName;
+
+            string tokenPath = Path.Combine(syncTokensDirectory, DateTime.Now.ToDateName());
+
+            await File.WriteAllTextAsync(tokenPath, events.NextSyncToken).ConfigureAwait(false);
         }
 
         public void Dispose()
