@@ -88,7 +88,7 @@ namespace TaskerAgent.Infra.Services.Calendar
                 mScopes,
                 "dordatas",
                 CancellationToken.None,
-                new FileDataStore(credPath)).ConfigureAwait(false);
+                new FileDataStore(credPath, fullPath: true)).ConfigureAwait(false);
         }
 
         public async Task<IEnumerable<EventInfo>> PullEvents(DateTime lowerTimeBoundary, DateTime upperTimeBoundary)
@@ -172,7 +172,7 @@ namespace TaskerAgent.Infra.Services.Calendar
         public async Task InitialFullSynchronization()
         {
             if (!mIsConnected)
-                throw new InvalidOperationException("Could not push events. Please connect first");
+                throw new InvalidOperationException("Could not intitialize full sync. Please connect first");
 
             EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
 
@@ -188,6 +188,37 @@ namespace TaskerAgent.Infra.Services.Calendar
             string tokenPath = Path.Combine(syncTokensDirectory, DateTime.Now.ToDateName());
 
             await File.WriteAllTextAsync(tokenPath, events.NextSyncToken).ConfigureAwait(false);
+        }
+
+        public async Task Synchronize()
+        {
+            if (!mIsConnected)
+                throw new InvalidOperationException("Could not intitialize full sync. Please connect first");
+
+            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
+
+            string syncTokensDirectory = Path.Combine(
+                mTaskerAgentOptions.CurrentValue.DatabaseDirectoryPath, SyncTokensDirectory);
+
+            string latestDate = FindLatestDate();
+
+            string tokenPath = Path.Combine(syncTokensDirectory, latestDate);
+
+            request.SyncToken = File.ReadAllText(tokenPath);
+
+            Events events = await request.ExecuteAsync().ConfigureAwait(false);
+
+            foreach(Event eventItem in events.Items)
+            {
+                // TODO
+                //event2.Status == "confirmed";
+                //event2.Status == "cancelled";
+            }
+        }
+
+        private string FindLatestDate()
+        {
+            // TODO.
         }
 
         public void Dispose()

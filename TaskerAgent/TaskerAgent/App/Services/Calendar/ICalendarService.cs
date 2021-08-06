@@ -16,5 +16,6 @@ namespace TaskerAgent.App.Services.Calendar
         /// previous 31 days and next 31 days from today.
         /// </summary>
         Task InitialFullSynchronization();
+        Task Synchronize();
     }
 }
