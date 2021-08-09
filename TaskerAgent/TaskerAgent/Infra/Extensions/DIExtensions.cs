@@ -7,7 +7,7 @@ using TaskData.ObjectSerializer.JsonService;
 using TaskData.TasksGroups.Producers;
 using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.Services.Email;
-using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
+using TaskerAgent.App.Services.TasksUpdaters;
 using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain.RepetitiveTasks.TasksProducers;
 using TaskerAgent.Domain.TaskGroup;
@@ -18,9 +18,9 @@ using TaskerAgent.Infra.Persistence.Repositories;
 using TaskerAgent.Infra.Services;
 using TaskerAgent.Infra.Services.AgentTiming;
 using TaskerAgent.Infra.Services.Email;
-using TaskerAgent.Infra.Services.RepetitiveTasksUpdaters;
 using TaskerAgent.Infra.Services.SummaryReporters;
 using TaskerAgent.Infra.Services.TasksParser;
+using TaskerAgent.Infra.Services.TasksUpdaters;
 
 namespace TaskerAgent.Infra.Extensions
 {
@@ -45,7 +45,7 @@ namespace TaskerAgent.Infra.Extensions
         private static void RegisterServices(IServiceCollection services)
         {
             services.AddSingleton<TaskerAgentService>();
-            services.AddSingleton<IRepetitiveTasksUpdater, RepetitiveTasksUpdater>();
+            services.AddSingleton<ITasksSynchronizer, TasksSynchronizer>();
             services.AddSingleton<FileTasksParser>();
             services.AddSingleton<SummaryReporter>();
             services.AddSingleton<AgentTimingService>();

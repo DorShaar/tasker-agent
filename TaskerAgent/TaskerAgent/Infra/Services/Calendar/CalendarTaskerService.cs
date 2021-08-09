@@ -14,9 +14,7 @@ using System.Threading.Tasks;
 using TaskerAgent.App.Services.Calendar;
 using TaskerAgent.Domain;
 using TaskerAgent.Domain.Calendar;
-using TaskerAgent.Domain.TaskerDateTime;
 using TaskerAgent.Infra.Options.Configurations;
-using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services.Calendar
 {
@@ -24,8 +22,6 @@ namespace TaskerAgent.Infra.Services.Calendar
     {
         private const string ApplicationName = "TaskerAgent";
         private const string CalendarId = "primary";
-        private const string SyncTokensDirectory = "sync_tokens";
-        private const int LargetsMonthInDays = 31;
 
         private readonly string[] mScopes = new[] { CalendarService.Scope.Calendar };
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
@@ -113,14 +109,25 @@ namespace TaskerAgent.Infra.Services.Calendar
             return eventsInfo;
         }
 
-        private EventsResource.ListRequest CreateEventsRequest(DateTime lowerTimeBoundary, DateTime upperTimeBoundary)
+        public async Task<IEnumerable<EventInfo>> PullUpdatedEvents(string syncToken)
         {
-            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
-            request.TimeMin = lowerTimeBoundary;
-            request.TimeMax = upperTimeBoundary;
-            request.SingleEvents = true;
+            if (!mIsConnected)
+                throw new InvalidOperationException("Could not synchronize. Please connect first");
 
-            return request;
+            List<EventInfo> eventsInfo = new List<EventInfo>();
+
+            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
+
+            request.SyncToken = syncToken;
+
+            Events events = await request.ExecuteAsync().ConfigureAwait(false);
+
+            foreach (Event eventItem in events.Items)
+            {
+                eventsInfo.Add(ToEventInfo(eventItem));
+            }
+
+            return eventsInfo;
         }
 
         private static EventInfo ToEventInfo(Event eventItem)
@@ -129,12 +136,14 @@ namespace TaskerAgent.Infra.Services.Calendar
             {
                 return new EventInfo(eventItem.Id,
                     eventItem.Description,
+                    eventItem.Status,
                     eventItem.Start.DateTime ?? default,
                     eventItem.End.DateTime ?? default);
             }
 
             return new RecurringEventInfo(eventItem.Id,
                     eventItem.Description,
+                    eventItem.Status,
                     eventItem.Start.DateTime ?? default,
                     eventItem.End.DateTime ?? default,
                     eventItem.RecurringEventId);
@@ -169,56 +178,27 @@ namespace TaskerAgent.Infra.Services.Calendar
             _ = await request.ExecuteAsync().ConfigureAwait(false);
         }
 
-        public async Task InitialFullSynchronization()
+        public async Task<string> InitialFullSynchronization(
+            DateTime lowerTimeBoundary, DateTime upperTimeBoundary)
         {
             if (!mIsConnected)
                 throw new InvalidOperationException("Could not intitialize full sync. Please connect first");
 
-            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
+            EventsResource.ListRequest request = CreateEventsRequest(lowerTimeBoundary, upperTimeBoundary);
 
-            request.TimeMin = DateTime.Now.AddDays(-LargetsMonthInDays);
-            request.TimeMax = DateTime.Now.AddDays(LargetsMonthInDays);
+            Events events = await request.ExecuteAsync().ConfigureAwait(false);
+
+            return events.NextSyncToken;
+        }
+
+        private EventsResource.ListRequest CreateEventsRequest(DateTime lowerTimeBoundary, DateTime upperTimeBoundary)
+        {
+            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
+            request.TimeMin = lowerTimeBoundary;
+            request.TimeMax = upperTimeBoundary;
             request.SingleEvents = true;
 
-            Events events = await request.ExecuteAsync().ConfigureAwait(false);
-
-            string syncTokensDirectory = Directory.CreateDirectory(Path.Combine(
-                mTaskerAgentOptions.CurrentValue.DatabaseDirectoryPath, SyncTokensDirectory)).FullName;
-
-            string tokenPath = Path.Combine(syncTokensDirectory, DateTime.Now.ToDateName());
-
-            await File.WriteAllTextAsync(tokenPath, events.NextSyncToken).ConfigureAwait(false);
-        }
-
-        public async Task Synchronize()
-        {
-            if (!mIsConnected)
-                throw new InvalidOperationException("Could not intitialize full sync. Please connect first");
-
-            EventsResource.ListRequest request = mCalendarService.Events.List(CalendarId);
-
-            string syncTokensDirectory = Path.Combine(
-                mTaskerAgentOptions.CurrentValue.DatabaseDirectoryPath, SyncTokensDirectory);
-
-            string latestDate = FindLatestDate();
-
-            string tokenPath = Path.Combine(syncTokensDirectory, latestDate);
-
-            request.SyncToken = File.ReadAllText(tokenPath);
-
-            Events events = await request.ExecuteAsync().ConfigureAwait(false);
-
-            foreach(Event eventItem in events.Items)
-            {
-                // TODO
-                //event2.Status == "confirmed";
-                //event2.Status == "cancelled";
-            }
-        }
-
-        private string FindLatestDate()
-        {
-            // TODO.
+            return request;
         }
 
         public void Dispose()

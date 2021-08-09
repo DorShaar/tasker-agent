@@ -2,6 +2,7 @@
 
 namespace TaskerAgent.Domain.Synchronization
 {
+    // TODO thinks if needed.
     public class SyncObjects
     {
         public List<SyncRemoteObject> ChangedRemoteObjects { get; } = new List<SyncRemoteObject>();

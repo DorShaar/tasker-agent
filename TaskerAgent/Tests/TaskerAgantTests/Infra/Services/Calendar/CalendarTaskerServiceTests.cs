@@ -44,8 +44,7 @@ namespace TaskerAgantTests.Infra.Services.Calendar
                 Frequency.Weekly).ConfigureAwait(false);
         }
 
-        //[Fact(Skip = "Requires real calendar. To be tested manually")]
-        [Fact]
+        [Fact(Skip = "Requires real calendar. To be tested manually")]
         public async Task InitialFullSynchronization_AsExpected()
         {
             const string SyncTokensDirectory = "sync_tokens";
@@ -60,7 +59,8 @@ namespace TaskerAgantTests.Infra.Services.Calendar
                 CalendarTaskerService calendarService = new CalendarTaskerService(configuration, NullLogger<CalendarTaskerService>.Instance);
                 await calendarService.Connect().ConfigureAwait(false);
 
-                await calendarService.InitialFullSynchronization().ConfigureAwait(false);
+                await calendarService.InitialFullSynchronization(DateTime.Now, DateTime.Now.AddDays(-3))
+                    .ConfigureAwait(false);
 
                 string tokenPath = Path.Combine(tempDirectory, SyncTokensDirectory, DateTime.Now.ToDateName());
                 Assert.True(File.Exists(Path.Combine(tempDirectory, tokenPath)));
@@ -71,28 +71,18 @@ namespace TaskerAgantTests.Infra.Services.Calendar
             }
         }
 
-        //[Fact(Skip = "Requires real calendar. To be tested manually")]
-        [Fact]
+        [Fact(Skip = "Requires real calendar. To be tested manually")]
         public async Task Synchronize_AsExpected()
         {
-            const string SyncTokensDirectory = "sync_tokens";
-            string tempDirectory = Directory.CreateDirectory(Path.GetRandomFileName()).FullName;
+            const string syncToken = "PUT_HERE";
 
-            try
-            {
-                IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
-                configuration.CurrentValue.CredentialsPath = @"C:\Dor\Projects\tasker-agent\TaskerAgent\tokens\tasker-agent-email-and-calendar.json";
-                configuration.CurrentValue.DatabaseDirectoryPath = tempDirectory;
+            IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
+            configuration.CurrentValue.CredentialsPath = @"C:\Dor\Projects\tasker-agent\TaskerAgent\tokens\tasker-agent-email-and-calendar.json";
 
-                CalendarTaskerService calendarService = new CalendarTaskerService(configuration, NullLogger<CalendarTaskerService>.Instance);
-                await calendarService.Connect().ConfigureAwait(false);
+            CalendarTaskerService calendarService = new CalendarTaskerService(configuration, NullLogger<CalendarTaskerService>.Instance);
+            await calendarService.Connect().ConfigureAwait(false);
 
-                await calendarService.Synchronize().ConfigureAwait(false);
-            }
-            finally
-            {
-                Directory.Delete(tempDirectory, recursive: true);
-            }
+            await calendarService.PullUpdatedEvents(syncToken).ConfigureAwait(false);
         }
     }
 }

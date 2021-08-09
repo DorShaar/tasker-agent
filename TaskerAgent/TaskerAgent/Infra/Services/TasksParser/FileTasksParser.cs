@@ -13,7 +13,6 @@ using TaskerAgent.App.TasksProducers;
 using TaskerAgent.Domain;
 using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 using TaskerAgent.Infra.Options.Configurations;
-using Triangle;
 
 namespace TaskerAgent.Infra.Services.TasksParser
 {

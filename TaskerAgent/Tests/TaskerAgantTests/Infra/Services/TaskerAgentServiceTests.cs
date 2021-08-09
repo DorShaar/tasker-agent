@@ -2,16 +2,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
-using TaskData.TasksGroups;
-using TaskData.WorkTasks;
-using TaskerAgent.App.Persistence.Repositories;
 using TaskerAgent.App.Services.Email;
-using TaskerAgent.Domain.Email;
-using TaskerAgent.Domain.RepetitiveTasks.RepetitiveMeasureableTasks;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services;
@@ -24,7 +17,6 @@ namespace TaskerAgantTests.Infra.Services
     {
         private const string TestFilesDirectory = "TestFiles";
         private const string DatabaseTestFilesPath = "TaskerAgentDB";
-        private const string EmailFeedbackSubject = "Re: Today's tasks";
 
         private readonly string mInputFileName = Path.Combine(TestFilesDirectory, "repetitive_tasks.txt");
         private readonly IServiceCollection mServiceCollection;
@@ -40,9 +32,7 @@ namespace TaskerAgantTests.Infra.Services
             configuration.CurrentValue.InputFilePath = mInputFileName;
             mServiceCollection.AddSingleton(configuration);
 
-            TaskerAgentService service = mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
-
-            service.UpdateTasksFromInputFile().Wait();
+            mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
         }
 
         [Fact]
@@ -70,9 +60,6 @@ namespace TaskerAgantTests.Infra.Services
 
             contentAfterChange = await File.ReadAllTextAsync(specificDayDatabase).ConfigureAwait(false);
             Assert.DoesNotContain(expectedStringToBeFound, contentAfterChange, StringComparison.OrdinalIgnoreCase);
-
-            TaskerAgentService service = mServiceCollection.BuildServiceProvider().GetRequiredService<TaskerAgentService>();
-            await service.UpdateTasksFromInputFile().ConfigureAwait(false);
 
             string contentAfterUpdate = await File.ReadAllTextAsync(specificDayDatabase).ConfigureAwait(false);
             Assert.Contains(expectedStringToBeFound, contentAfterUpdate, StringComparison.OrdinalIgnoreCase);
@@ -179,65 +166,6 @@ namespace TaskerAgantTests.Infra.Services
             string[] splittedReport = report.Split("Tasks Status");
 
             Assert.True(splittedReport.Length == 8);
-        }
-
-        [Fact]
-        public async Task CheckForUserFeedbacks_AsExpected()
-        {
-            const string message = @"Today's Tasks:
-Saturday - 03/04/2021:
-Drink Water. Expected: 2. Actual: 1.
-Exercise. Expected: 3. actual: 1.
-Sleep hours. Expected: 7. Actual:    5.
-Eat bamba. Expected: 2.Actual: 6
-";
-
-            IOptionsMonitor<TaskerAgentConfiguration> configuration = A.Fake<IOptionsMonitor<TaskerAgentConfiguration>>();
-            configuration.CurrentValue.DatabaseDirectoryPath = DatabaseTestFilesPath;
-            mServiceCollection.AddSingleton(configuration);
-
-            IEmailService emailService = A.Fake<IEmailService>();
-            A.CallTo(() => emailService.ReadMessages(false))
-                .Returns(new MessageInfo[] { new MessageInfo("id", EmailFeedbackSubject, message, DateTime.Now) });
-            mServiceCollection.AddSingleton(emailService);
-
-            ServiceProvider serviceProvider = mServiceCollection.BuildServiceProvider();
-            TaskerAgentService service = serviceProvider.GetRequiredService<TaskerAgentService>();
-            IDbRepository<ITasksGroup> realTasksGroupRepository = serviceProvider.GetRequiredService<IDbRepository<ITasksGroup>>();
-
-            ITasksGroup returnedTasksGroup = await realTasksGroupRepository.FindAsync("03-04-2021").ConfigureAwait(false);
-
-            List<IWorkTask> tasks = returnedTasksGroup.GetAllTasks().ToList();
-
-            BaseRepetitiveMeasureableTask task1 = tasks[0] as BaseRepetitiveMeasureableTask;
-            Assert.True(task1.Description == "Drink Water" && task1.Actual == 0);
-
-            BaseRepetitiveMeasureableTask task2 = tasks[1] as BaseRepetitiveMeasureableTask;
-            Assert.True(task2.Description == "Exercise" && task2.Actual == 0);
-
-            BaseRepetitiveMeasureableTask task3 = tasks[2] as BaseRepetitiveMeasureableTask;
-            Assert.True(task3.Description == "Sleep hours" && task3.Actual == 0);
-
-            BaseRepetitiveMeasureableTask task4 = tasks[3] as BaseRepetitiveMeasureableTask;
-            Assert.True(task4.Description == "Eat bamba" && task4.Actual == 0);
-
-            await service.CheckForUserFeedbacks().ConfigureAwait(false);
-
-            returnedTasksGroup = await realTasksGroupRepository.FindAsync("03-04-2021").ConfigureAwait(false);
-
-            tasks = returnedTasksGroup.GetAllTasks().ToList();
-
-            task1 = tasks[0] as BaseRepetitiveMeasureableTask;
-            Assert.True(task1.Description == "Drink Water" && task1.Actual == 1);
-
-            task2 = tasks[1] as BaseRepetitiveMeasureableTask;
-            Assert.True(task2.Description == "Exercise" && task2.Actual == 1);
-
-            task3 = tasks[2] as BaseRepetitiveMeasureableTask;
-            Assert.True(task3.Description == "Sleep hours" && task3.Actual == 5);
-
-            task4 = tasks[3] as BaseRepetitiveMeasureableTask;
-            Assert.True(task4.Description == "Eat bamba" && task4.Actual == 6);
         }
     }
 }

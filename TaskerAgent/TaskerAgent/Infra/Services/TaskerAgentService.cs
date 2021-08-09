@@ -4,18 +4,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using TaskData.OperationResults;
 using TaskData.TasksGroups;
-using TaskData.WorkTasks.Producers;
 using TaskerAgent.App.Persistence.Repositories;
+using TaskerAgent.App.Services.Calendar;
 using TaskerAgent.App.Services.Email;
-using TaskerAgent.App.Services.RepetitiveTasksUpdaters;
+using TaskerAgent.App.Services.TasksUpdaters;
 using TaskerAgent.Domain.Email;
 using TaskerAgent.Domain.TaskerDateTime;
 using TaskerAgent.Domain.TaskGroup;
 using TaskerAgent.Infra.Options.Configurations;
 using TaskerAgent.Infra.Services.SummaryReporters;
-using TaskerAgent.Infra.Services.TasksParser;
 using Triangle.Time;
 
 namespace TaskerAgent.Infra.Services
@@ -23,9 +21,8 @@ namespace TaskerAgent.Infra.Services
     public class TaskerAgentService
     {
         private readonly IDbRepository<DailyTasksGroup> mTasksGroupRepository;
-        private readonly IRepetitiveTasksUpdater mRepetitiveTasksUpdater;
+        private readonly ITasksSynchronizer mTasksSynchronizer;
         private readonly IEmailService mEmailService;
-        private readonly FileTasksParser mRepetitiveTasksParser;
         private readonly SummaryReporter mSummaryReporter;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerOptions;
         private readonly ILogger<TaskerAgentService> mLogger;
@@ -33,22 +30,21 @@ namespace TaskerAgent.Infra.Services
         public bool IsAgentReady { get; }
 
         public TaskerAgentService(IDbRepository<DailyTasksGroup> TaskGroupRepository,
-            IRepetitiveTasksUpdater repetitiveTasksUpdater,
+            ITasksSynchronizer tasksSynchronizer,
             IEmailService emailService,
-            FileTasksParser repetitiveTasksParser,
             SummaryReporter summaryReporter,
             IOptionsMonitor<TaskerAgentConfiguration> taskerOptions,
             ILogger<TaskerAgentService> logger)
         {
             mTasksGroupRepository = TaskGroupRepository ?? throw new ArgumentNullException(nameof(TaskGroupRepository));
-            mRepetitiveTasksUpdater = repetitiveTasksUpdater ?? throw new ArgumentNullException(nameof(repetitiveTasksUpdater));
+            mTasksSynchronizer = tasksSynchronizer ?? throw new ArgumentNullException(nameof(tasksSynchronizer));
             mEmailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
-            mRepetitiveTasksParser = repetitiveTasksParser ?? throw new ArgumentNullException(nameof(repetitiveTasksParser));
             mSummaryReporter = summaryReporter ?? throw new ArgumentNullException(nameof(summaryReporter));
             mTaskerOptions = taskerOptions ?? throw new ArgumentNullException(nameof(taskerOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            IsAgentReady = mEmailService.Connect().Result;
+            mEmailService.Connect().Wait();
+            IsAgentReady = true;
         }
 
         public async Task<bool> SendTodaysFutureTasksReport()
@@ -110,25 +106,9 @@ namespace TaskerAgent.Infra.Services
             return tasksGroup;
         }
 
-        public async Task UpdateTasksFromInputFile()
+        public async Task SynchronizeCalendarTasks()
         {
-            mLogger.LogDebug("Updating repetitive tasks");
-
-            IEnumerable<ITasksGroup> tasksFromConfigGroup = await ReadTasksFromInputFile().ConfigureAwait(false);
-
-            if (tasksFromConfigGroup == null)
-            {
-                mLogger.LogError("Could not update repetitive tasks");
-                return;
-            }
-
-            // TODO think if needed.
-            //await mRepetitiveTasksUpdater.Update(tasksFromConfigGroup).ConfigureAwait(false);
-        }
-
-        private async Task<IEnumerable<ITasksGroup>> ReadTasksFromInputFile()
-        {
-            return await mRepetitiveTasksParser.ParseTasksToWhyGroups().ConfigureAwait(false);
+            await mTasksSynchronizer.Synchronize().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -235,31 +215,6 @@ namespace TaskerAgent.Infra.Services
 
             string weeklySummaryReport = mSummaryReporter.CreateWeeklySummaryReport(weeklyGroups);
             return await mEmailService.SendMessage("Weekly Summary Report", weeklySummaryReport).ConfigureAwait(false);
-        }
-
-        public async Task<IEnumerable<DateTime>> CheckForUserFeedbacks()
-        {
-            mLogger.LogInformation("Checking for updates");
-
-            IEnumerable<MessageInfo> messages = await mEmailService.ReadMessages().ConfigureAwait(false);
-
-            if (messages?.Any() != true)
-            {
-                mLogger.LogDebug("No new messages found. Nothing to updated");
-                return Array.Empty<DateTime>();
-            }
-
-            List<MessageInfo> messagesUpdateSuccessfully = new List<MessageInfo>();
-            foreach (MessageInfo message in messages)
-            {
-                if (await mRepetitiveTasksUpdater.UpdateGroupByMessage(message).ConfigureAwait(false))
-                {
-                    messagesUpdateSuccessfully.Add(message);
-                    await mEmailService.MarkMessageAsRead(message.Id).ConfigureAwait(false);
-                }
-            }
-
-            return messagesUpdateSuccessfully.Select(message => message.DateCreated);
         }
     }
 }

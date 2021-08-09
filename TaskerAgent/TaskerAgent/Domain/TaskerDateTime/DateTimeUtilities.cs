@@ -59,5 +59,16 @@ namespace TaskerAgent.Domain.TaskerDateTime
         {
             return date.ToString(TimeConsts.TimeFormat).Replace('/', '-');
         }
+
+        public static (DateTime startOfTheMonth, DateTime endOfTheMonth) GetThisMonthRange()
+        {
+            DateTime nowTime = DateTime.Now;
+
+            DateTime startOfThisMonth = new DateTime(nowTime.Year, nowTime.Month, 1);
+            DateTime endOfThisMonth = new DateTime(
+                nowTime.Year, nowTime.Month, DateTime.DaysInMonth(nowTime.Year, nowTime.Month));
+
+            return (startOfThisMonth, endOfThisMonth);
+        }
     }
 }

@@ -20,7 +20,7 @@ using TaskerAgent.Infra.Options.Configurations;
 
 namespace TaskerAgent.Infra.Services.Email
 {
-    public class EmailService : IEmailService
+    public class EmailService : IEmailService, IDisposable, IAsyncDisposable
     {
         private const string UserId = "me";
         private const string TaskerAgentLable = "Label_2783741690411084443";
@@ -42,7 +42,7 @@ namespace TaskerAgent.Infra.Services.Email
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<bool> Connect()
+        public async Task Connect()
         {
             mGmailService = new GmailService(new BaseClientService.Initializer()
             {
@@ -53,7 +53,6 @@ namespace TaskerAgent.Infra.Services.Email
             mLogger.LogInformation("Connected to Gmail service");
 
             mIsConnected = true;
-            return true;
         }
 
         private async Task<UserCredential> GetUserCredential()

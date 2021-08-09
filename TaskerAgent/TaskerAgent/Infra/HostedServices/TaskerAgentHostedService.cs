@@ -60,8 +60,6 @@ namespace TaskerAgent.Infra.HostedServices
 
                 await UpdateTaskFromInputFile(elapsedEventArgs).ConfigureAwait(false);
 
-                await CheckForUserDailyReportsAndSendSummaries().ConfigureAwait(false);
-
                 await CheckForMissingDailyReport(elapsedEventArgs).ConfigureAwait(false);
 
                 await SendTodaysFutureTasksReport().ConfigureAwait(false);
@@ -75,7 +73,7 @@ namespace TaskerAgent.Infra.HostedServices
         {
             if (mAgentTimingService.UpdateTasksFromInputFileHandler.ShouldDo)
             {
-                await mTaskerAgentService.UpdateTasksFromInputFile().ConfigureAwait(false);
+                await mTaskerAgentService.SynchronizeCalendarTasks().ConfigureAwait(false);
                 mAgentTimingService.UpdateTasksFromInputFileHandler.SetDone();
             }
             else
@@ -121,20 +119,6 @@ namespace TaskerAgent.Infra.HostedServices
             else
             {
                 mLogger.LogDebug($"Should not send weekly summary yet {elapsedEventArgs.SignalTime.TimeOfDay}");
-            }
-        }
-
-        private async Task CheckForUserDailyReportsAndSendSummaries()
-        {
-            IEnumerable<DateTime> datesGivenFeedbackByUser =
-                await mTaskerAgentService.CheckForUserFeedbacks().ConfigureAwait(false);
-
-            foreach (DateTime dateTime in datesGivenFeedbackByUser)
-            {
-                if (await mTaskerAgentService.SendDailySummary(dateTime).ConfigureAwait(false))
-                    mAgentTimingService.DailySummarySentTimingHandler.SetDone();
-
-                await mTaskerAgentService.SignalDateGivenFeedbackByUser(dateTime).ConfigureAwait(false);
             }
         }
 
