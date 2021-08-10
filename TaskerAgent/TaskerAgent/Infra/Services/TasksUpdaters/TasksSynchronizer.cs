@@ -22,16 +22,19 @@ namespace TaskerAgent.Infra.Services.TasksUpdaters
 
         private readonly FileTasksParser mTasksParser;
         private readonly ICalendarService mCalendarService;
+        private readonly EventsServerToLocalMapper mEventsServerToLocalMapper;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
         private readonly ILogger<TasksSynchronizer> mLogger;
 
         public TasksSynchronizer(FileTasksParser tasksParser,
             ICalendarService calendarService,
+            EventsServerToLocalMapper eventsServerToLocalMapper,
             IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
             ILogger<TasksSynchronizer> logger)
         {
             mTasksParser = tasksParser ?? throw new ArgumentNullException(nameof(tasksParser));
             mCalendarService = calendarService ?? throw new ArgumentNullException(nameof(calendarService));
+            mEventsServerToLocalMapper = eventsServerToLocalMapper ?? throw new ArgumentNullException(nameof(eventsServerToLocalMapper));
             mTaskerAgentOptions = taskerAgentOptions ?? throw new ArgumentNullException(nameof(taskerAgentOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -115,12 +118,14 @@ namespace TaskerAgent.Infra.Services.TasksUpdaters
             return await File.ReadAllTextAsync(tokenPath).ConfigureAwait(false);
         }
 
-        private void LogLocalUnsynchornized(IEnumerable<ITasksGroup> localEvents, IEnumerable<EventInfo> serverEvents)
+        private void LogLocalUnsynchornized(IEnumerable<ITasksGroup> localEvents,
+            IEnumerable<EventInfo> serverEvents)
         {
-            // TODO
+            mEventsServerToLocalMapper.Add();
         }
 
-        private void LogServerUnsynchornized(IEnumerable<ITasksGroup> localEvents, IEnumerable<EventInfo> serverEvents)
+        private void LogServerUnsynchornized(IEnumerable<ITasksGroup> localEvents,
+            IEnumerable<EventInfo> serverEvents)
         {
             // TODO
         }

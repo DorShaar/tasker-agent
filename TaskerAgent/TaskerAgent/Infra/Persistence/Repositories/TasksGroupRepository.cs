@@ -10,6 +10,7 @@ using TaskerAgent.Infra.Persistence.Context;
 
 namespace TaskerAgent.Infra.Persistence.Repositories
 {
+    // TODO think if needed.
     public class TasksGroupRepository : IDbRepository<DailyTasksGroup>
     {
         private readonly ILogger<TasksGroupRepository> mLogger;

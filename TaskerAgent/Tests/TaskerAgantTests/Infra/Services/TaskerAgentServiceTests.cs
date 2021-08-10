@@ -18,7 +18,7 @@ namespace TaskerAgantTests.Infra.Services
         private const string TestFilesDirectory = "TestFiles";
         private const string DatabaseTestFilesPath = "TaskerAgentDB";
 
-        private readonly string mInputFileName = Path.Combine(TestFilesDirectory, "repetitive_tasks.txt");
+        private readonly string mInputFileName = Path.Combine(TestFilesDirectory, "start_with_why.txt");
         private readonly IServiceCollection mServiceCollection;
 
         public TaskerAgentServiceTests()

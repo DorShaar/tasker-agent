@@ -18,6 +18,7 @@ namespace TaskerAgent.Infra.Persistence.Context
     public class AppDbContext
     {
         private const string FirstId = "1000";
+        private const string EventsMapperFileName = "events_mapper.json";
 
         private readonly IObjectSerializer mSerializer;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mConfiguration;
@@ -109,6 +110,7 @@ namespace TaskerAgent.Infra.Persistence.Context
                 .ConfigureAwait(false);
         }
 
+        // TODO think if needed.
         public async Task AddToDatabase(ITasksGroup newGroup)
         {
             string databasePath = GetDatabasePath(newGroup.Name);
@@ -184,6 +186,39 @@ namespace TaskerAgent.Infra.Persistence.Context
         public async Task SaveNextId()
         {
             await mSerializer.Serialize(mIdProducer.PeekForNextId(), NextIdPath).ConfigureAwait(false);
+        }
+
+        public async Task SaveEventsMapper(Dictionary<string, List<string>> eventsMap)
+        {
+            string eventsMapperPath = Path.Combine(
+                mConfiguration.CurrentValue.DatabaseDirectoryPath, EventsMapperFileName);
+
+            if (!Directory.Exists(mConfiguration.CurrentValue.DatabaseDirectoryPath))
+            {
+                mLogger.LogError("Could not save events mapping since directory " +
+                    $"{mConfiguration.CurrentValue.DatabaseDirectoryPath} does not exist");
+
+                return;
+            }
+
+            await mSerializer.Serialize(eventsMap, eventsMapperPath).ConfigureAwait(false);
+        }
+
+        public async Task<Dictionary<string, List<string>>> LoadEventsMapper()
+        {
+            string eventsMapperPath = Path.Combine(
+                mConfiguration.CurrentValue.DatabaseDirectoryPath, EventsMapperFileName);
+
+            if (!File.Exists(eventsMapperPath))
+            {
+                mLogger.LogError("Could not load events mapping since file " +
+                    $"{eventsMapperPath} does not exist");
+
+                return new Dictionary<string, List<string>>();
+            }
+
+            return await mSerializer.Deserialize<Dictionary<string, List<string>>>(eventsMapperPath)
+                .ConfigureAwait(false);
         }
     }
 }
