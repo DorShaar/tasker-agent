@@ -134,6 +134,8 @@ namespace TaskerAgent.Infra.Services.Calendar
         {
             if (eventItem.RecurringEventId == null)
             {
+                string localId = eventItem.ExtendedProperties.Shared // TODO check.
+
                 return new EventInfo(eventItem.Id,
                     eventItem.Description,
                     eventItem.Status,

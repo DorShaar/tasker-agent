@@ -5,7 +5,7 @@ using TaskerAgent.Infra.Persistence.Context;
 
 namespace TaskerAgent.Domain.Synchronization
 {
-    public class EventsServerToLocalMapper
+    public class EventsServerAndLocalMapper
     {
         private readonly AppDbContext mAppDbContext;
 
@@ -13,8 +13,10 @@ namespace TaskerAgent.Domain.Synchronization
         /// Mapps between local event id to a list of server events ids.
         /// </summary>
         private readonly Dictionary<string, List<string>> mMapper = new Dictionary<string, List<string>>();
+        private readonly List<string> mLocalUnregisteredEvents = new List<string>();
+        private readonly List<string> mServerUnregisteredEvents = new List<string>();
 
-        public EventsServerToLocalMapper(AppDbContext appDbContext)
+        public EventsServerAndLocalMapper(AppDbContext appDbContext)
         {
             mAppDbContext = appDbContext ?? throw new ArgumentNullException(nameof(appDbContext));
 
@@ -31,6 +33,21 @@ namespace TaskerAgent.Domain.Synchronization
 
             serverEventIds.Add(serverEventId);
             await mAppDbContext.SaveEventsMapper(mMapper).ConfigureAwait(false);
+        }
+
+        public bool TryGetValue(string localEventId, out List<string> serverEventId)
+        {
+            return mMapper.TryGetValue(localEventId, out serverEventId);
+        }
+
+        public void AddLocalUnregisteredEventId(string localEventId)
+        {
+            mLocalUnregisteredEvents.Add(localEventId);
+        }
+
+        public void AddServerUnregisteredEventId(string localEventId)
+        {
+            mServerUnregisteredEvents.Add(localEventId);
         }
     }
 }

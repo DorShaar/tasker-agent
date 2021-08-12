@@ -3,8 +3,10 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using TaskData.TasksGroups;
+using TaskData.WorkTasks;
 using TaskerAgent.App.Services.Calendar;
 using TaskerAgent.App.Services.TasksUpdaters;
 using TaskerAgent.Domain.Calendar;
@@ -22,19 +24,19 @@ namespace TaskerAgent.Infra.Services.TasksUpdaters
 
         private readonly FileTasksParser mTasksParser;
         private readonly ICalendarService mCalendarService;
-        private readonly EventsServerToLocalMapper mEventsServerToLocalMapper;
+        private readonly EventsServerAndLocalMapper mEventsServerAndLocalMapper;
         private readonly IOptionsMonitor<TaskerAgentConfiguration> mTaskerAgentOptions;
         private readonly ILogger<TasksSynchronizer> mLogger;
 
         public TasksSynchronizer(FileTasksParser tasksParser,
             ICalendarService calendarService,
-            EventsServerToLocalMapper eventsServerToLocalMapper,
+            EventsServerAndLocalMapper eventsServerToLocalMapper,
             IOptionsMonitor<TaskerAgentConfiguration> taskerAgentOptions,
             ILogger<TasksSynchronizer> logger)
         {
             mTasksParser = tasksParser ?? throw new ArgumentNullException(nameof(tasksParser));
             mCalendarService = calendarService ?? throw new ArgumentNullException(nameof(calendarService));
-            mEventsServerToLocalMapper = eventsServerToLocalMapper ?? throw new ArgumentNullException(nameof(eventsServerToLocalMapper));
+            mEventsServerAndLocalMapper = eventsServerToLocalMapper ?? throw new ArgumentNullException(nameof(eventsServerToLocalMapper));
             mTaskerAgentOptions = taskerAgentOptions ?? throw new ArgumentNullException(nameof(taskerAgentOptions));
             mLogger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -56,7 +58,7 @@ namespace TaskerAgent.Infra.Services.TasksUpdaters
 
             IEnumerable<EventInfo> eventsInfo = await GetServerEventsAndUpdateSyncToken().ConfigureAwait(false);
 
-            LogLocalUnsynchornized(tasksFromConfigGroup, eventsInfo);
+            await LogLocalUnsynchornized(tasksFromConfigGroup, eventsInfo).ConfigureAwait(false);
             LogServerUnsynchornized(tasksFromConfigGroup, eventsInfo);
         }
 
@@ -118,16 +120,49 @@ namespace TaskerAgent.Infra.Services.TasksUpdaters
             return await File.ReadAllTextAsync(tokenPath).ConfigureAwait(false);
         }
 
-        private void LogLocalUnsynchornized(IEnumerable<ITasksGroup> localEvents,
+        // TODO rename log method
+        /// <summary>
+        /// Logs all the local events which are not found in the server events.
+        /// Logs all the server events which are not found in the local events.
+        /// </summary>
+        private async Task LogUnsynchornized(IEnumerable<ITasksGroup> localEventsGroups,
             IEnumerable<EventInfo> serverEvents)
         {
-            mEventsServerToLocalMapper.Add();
-        }
+            //List<string> localTaskIds = new List<string>(); // TODO
 
-        private void LogServerUnsynchornized(IEnumerable<ITasksGroup> localEvents,
-            IEnumerable<EventInfo> serverEvents)
-        {
-            // TODO
+            foreach (ITasksGroup tasksGroup in localEventsGroups)
+            {
+                foreach (IWorkTask workTask in tasksGroup.GetAllTasks())
+                {
+                    mLogger.LogDebug($"Task {workTask.Description} of ID {workTask.ID} is registered");
+                    if (mEventsServerAndLocalMapper.TryGetValue(workTask.ID, out List<string> serverRegisteredEventsId))
+                    {
+                        mLogger.LogDebug($"Task {workTask.Description} of ID {workTask.ID} is registered. " +
+                            "Checking if any of the server events is registered as well");
+
+                        EventInfo eventInfo = serverEvents.FirstOrDefault(eventInfo => eventInfo.LocalId == workTask.ID);
+
+                        if (eventInfo == null)
+                        {
+
+                            // TODO think how to check unsynchronized - from serverEvents and / or from serverRegisteredEventsId.
+                            mLogger.LogInformation($"Task {workTask.Description} of ID {workTask.ID} is not ");
+                            mEventsServerAndLocalMapper.Add
+                        }
+
+
+                        foreach (string serverEventId in serverRegisteredEventsId)
+                        {
+                        }
+                        continue;
+                    }
+
+                    mLogger.LogInformation($"Task {workTask.Description} of ID {workTask.ID} is registered");
+                    mEventsServerAndLocalMapper.AddLocalUnregisteredEventId(workTask.ID);
+                }
+            }
+
+            await mEventsServerAndLocalMapper.Add().ConfigureAwait(false);
         }
     }
 }
