@@ -58,8 +58,7 @@ namespace TaskerAgent.Infra.Services.TasksUpdaters
 
             IEnumerable<EventInfo> eventsInfo = await GetServerEventsAndUpdateSyncToken().ConfigureAwait(false);
 
-            await LogLocalUnsynchornized(tasksFromConfigGroup, eventsInfo).ConfigureAwait(false);
-            LogServerUnsynchornized(tasksFromConfigGroup, eventsInfo);
+            HandleUnsynchornizedEvents(tasksFromConfigGroup, eventsInfo);
         }
 
         private async Task<IEnumerable<EventInfo>> GetServerEventsAndUpdateSyncToken()
@@ -120,16 +119,13 @@ namespace TaskerAgent.Infra.Services.TasksUpdaters
             return await File.ReadAllTextAsync(tokenPath).ConfigureAwait(false);
         }
 
-        // TODO rename log method
         /// <summary>
-        /// Logs all the local events which are not found in the server events.
-        /// Logs all the server events which are not found in the local events.
+        /// Handles all the local events which are not found in the server events.
+        /// Handles all the server events which are not found in the local events.
         /// </summary>
-        private async Task LogUnsynchornized(IEnumerable<ITasksGroup> localEventsGroups,
+        private void HandleUnsynchornizedEvents(IEnumerable<ITasksGroup> localEventsGroups,
             IEnumerable<EventInfo> serverEvents)
         {
-            //List<string> localTaskIds = new List<string>(); // TODO
-
             foreach (ITasksGroup tasksGroup in localEventsGroups)
             {
                 foreach (IWorkTask workTask in tasksGroup.GetAllTasks())
@@ -139,30 +135,35 @@ namespace TaskerAgent.Infra.Services.TasksUpdaters
                     {
                         mLogger.LogDebug($"Task {workTask.Description} of ID {workTask.ID} is registered. " +
                             "Checking if any of the server events is registered as well");
+                        IEnumerable<EventInfo> serverEventsInfosWithUnregisteredLocalId = serverEvents.Where(
+                            eventInfo => !mEventsServerAndLocalMapper.LocalEventIds.Contains(eventInfo.LocalId));
 
-                        EventInfo eventInfo = serverEvents.FirstOrDefault(eventInfo => eventInfo.LocalId == workTask.ID);
-
-                        if (eventInfo == null)
-                        {
-
-                            // TODO think how to check unsynchronized - from serverEvents and / or from serverRegisteredEventsId.
-                            mLogger.LogInformation($"Task {workTask.Description} of ID {workTask.ID} is not ");
-                            mEventsServerAndLocalMapper.Add
-                        }
-
-
-                        foreach (string serverEventId in serverRegisteredEventsId)
-                        {
-                        }
-                        continue;
+                        AddUnregisteredServerEvents(serverEventsInfosWithUnregisteredLocalId, serverRegisteredEventsId);
                     }
 
-                    mLogger.LogInformation($"Task {workTask.Description} of ID {workTask.ID} is registered");
-                    mEventsServerAndLocalMapper.AddLocalUnregisteredEventId(workTask.ID);
+                    AddUnregisteredLocalEvent(workTask);
                 }
             }
 
-            await mEventsServerAndLocalMapper.Add().ConfigureAwait(false);
+            mEventsServerAndLocalMapper.ManualAdd();
+        }
+
+        private void AddUnregisteredServerEvents(IEnumerable<EventInfo> serverEvents, List<string> serverRegisteredEventsId)
+        {
+            foreach(EventInfo eventInfo in serverEvents)
+            {
+                if (!serverRegisteredEventsId.Contains(eventInfo.ServerId))
+                {
+                    mLogger.LogInformation($"Server event ID {eventInfo.ServerId} is not registered");
+                    mEventsServerAndLocalMapper.AddUnregisteredServerEventId(eventInfo.ServerId);
+                }
+            }
+        }
+
+        private void AddUnregisteredLocalEvent(IWorkTask workTask)
+        {
+            mLogger.LogInformation($"Task {workTask.Description} of ID {workTask.ID} is not registered");
+            mEventsServerAndLocalMapper.AddUnregisteredLocalEventId(workTask.ID);
         }
     }
 }

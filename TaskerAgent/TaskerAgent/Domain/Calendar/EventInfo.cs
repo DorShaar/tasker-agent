@@ -12,6 +12,19 @@ namespace TaskerAgent.Domain.Calendar
         public DateTime EndTime { get; }
 
         public EventInfo(string serverId,
+            string name,
+            string status,
+            DateTime startTime,
+            DateTime endTime)
+        {
+            ServerId = serverId;
+            Name = name;
+            Status = status;
+            StartTime = startTime;
+            EndTime = endTime;
+        }
+
+        public EventInfo(string serverId,
             string localId,
             string name,
             string status,

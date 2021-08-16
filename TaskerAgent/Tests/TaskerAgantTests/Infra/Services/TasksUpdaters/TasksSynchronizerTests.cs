@@ -8,8 +8,10 @@ using System.IO;
 using System.Threading.Tasks;
 using TaskerAgent.App.Services.Calendar;
 using TaskerAgent.Domain.Calendar;
+using TaskerAgent.Domain.Synchronization;
 using TaskerAgent.Infra.Extensions;
 using TaskerAgent.Infra.Options.Configurations;
+using TaskerAgent.Infra.Persistence.Context;
 using TaskerAgent.Infra.Services.TasksParser;
 using TaskerAgent.Infra.Services.TasksUpdaters;
 using Xunit;
@@ -50,13 +52,20 @@ namespace TaskerAgantTests.Infra.Services.TasksUpdaters
             A.CallTo(() => calendarService.PullEvents(A<DateTime>.Ignored, A<DateTime>.Ignored))
                 .Returns(events);
 
+            EventsServerAndLocalMapper eventsMapper =
+                mServiceCollection.BuildServiceProvider().GetRequiredService<EventsServerAndLocalMapper>();
+
             TasksSynchronizer tasksSynchronizer = new TasksSynchronizer(
                 fileTasksParser,
                 calendarService,
+                eventsMapper,
                 configuration,
                 NullLogger<TasksSynchronizer>.Instance);
 
             await tasksSynchronizer.Synchronize().ConfigureAwait(false);
+
+            // TODO check serielization works
+            dfdf
         }
     }
 }
